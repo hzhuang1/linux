@@ -35,5 +35,7 @@ obj-$(CONFIG_CLEOPATRA)	+= nettel.o
 obj-$(CONFIG_FIREBEE)	+= firebee.o
 obj-$(CONFIG_MCF8390)	+= mcf8390.o
 
-obj-y			+= gpio.o
+obj-$(CONFIG_PCI)	+= pci.o
+
+obj-y			+= pinmux.o gpio.o
 extra-y := head.o
