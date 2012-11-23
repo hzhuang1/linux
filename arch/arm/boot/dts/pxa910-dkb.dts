@@ -24,10 +24,10 @@
 
 	soc {
 		apb@d4000000 {
-			uart1: uart@d4017000 {
+			uart1: uart@17000 {
 				status = "okay";
 			};
-			twsi1: i2c@d4011000 {
+			twsi1: i2c@11000 {
 				status = "okay";
 
 				pmic: 88pm860x@34 {
@@ -167,7 +167,7 @@
 					};
 				};
 			};
-			rtc: rtc@d4010000 {
+			rtc: rtc@10000 {
 				status = "okay";
 			};
 		};
