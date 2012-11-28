@@ -45,6 +45,84 @@
 				mrvl,intc-nr-irqs = <64>;
 			};
 
+			apmu: clocks@82800 {
+				compatible = "marvell,mmp-apmu";
+				reg = <0x82800 0x100>;
+
+				/*
+				 * Processor clocks: pclk, pdclk, baclk, xpclk
+				 * DDR Controller clocks: dclk
+				 * AXI Fabric clocks: aclk
+				 */
+				pclk_refclk: refclk_pclk {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&pj1_refclk>;
+					clock-output-names = "pclk";
+					//clock-out-names = "pclk104mhz", "pclk156mhz", "pclk208mhz", "pclk312mhz", "pclk500mhz", "pclk624mhz", "pclk806mhz", "pclk1001mhz";
+					marvell,mmp-clock-frequency = <104000000 156000000 208000000 312000000 500500000 624000000 806000000 1001000000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0x7>;
+				};
+				/* pdclk -- DDR Interface clock */
+				pdclk_refclk: refclk_pdclk {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&pj1_refclk>;
+					clock-output-names = "pdclk";
+					marvell,mmp-clock-frequency = <78000000 104000000 156000000 201000000 250250000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0x38>;
+				};
+				/* baclk -- AXI Fabric Bus Interface clock */
+				baclk_refclk: refclk_baclk {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&pj1_refclk>;
+					clock-output-names = "baclk";
+					marvell,mmp-clock-frequency = <78000000 104000000 156000000 201000000 250250000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0x1c0>;
+				};
+				/* xpclk -- L2 interface clock */
+				xpclk_refclk: refclk_xpclk {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&pj1_refclk>;
+					clock-output-names = "xpclk";
+					marvell,mmp-clock-frequency = <104000000 156000000 250250000 312000000 403000000 500500000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0xe00>;
+				};
+				/* dclk -- DDR Controller clock */
+				dclk2x_refclk: refclk_dclk2x {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&ddr_refclk>;
+					clock-output-names = "dclk2x";
+					marvell,mmp-clock-frequency = <208000000 312000000 402000000 500500000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0x7000>;
+				};
+				dclk_refclk: refclk_dclk {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&dclk2x_refclk>;
+					clock-output-names = "dclk";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 2>;
+				};
+				/* aclk -- AXI Fabric clock */
+				aclk_refclk: refclk_aclk {
+					compatible = "marvell,mmp-apmu-clkdiv";
+					#clock-cells = <0>;
+					clocks = <&axi_refclk>;
+					clock-output-names = "aclk";
+					marvell,mmp-clock-frequency = <104000000 156000000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x4 0x38000>;
+				};
+			};
 		};
 
 		apb@d4000000 {	/* APB */
@@ -53,6 +131,71 @@
 			#size-cells = <1>;
 			reg = <0xd4000000 0x00200000>;
 			ranges = <0 0xd4000000 0x00200000>;
+
+			mpmu: clocks@50000 {
+				compatible = "marvell,mmp-mpmu";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0x50000 0x1100>;
+				ranges = <0 0x50000 0x1100>;
+
+				osc_32k: refclk32khz {
+					compatible = "fixed-clock";
+					#clock-cells = <0>;
+					clock-frequency = <32768>;
+					clock-output-names = "osc32khz";
+				};
+				osc_26m: refclk26mhz {
+					compatible = "fixed-clock";
+					#clock-cells = <0>;
+					clock-frequency = <26000000>;
+					clock-output-names = "osc26mhz";
+				};
+				pll1_312m: refclk312mhz {
+					compatible = "marvell,mmp-fixed-clkrate";
+					#clock-cells = <0>;
+					clocks = <&osc_26m>;
+					clock-frequency = <312000000>;
+					clock-output-names = "refclk312mhz";
+				};
+				pll1_624m: refclk624mhz {
+					compatible = "marvell,mmp-fixed-clkrate";
+					#clock-cells = <0>;
+					clocks = <&osc_26m>;
+					clock-frequency = <624000000>;
+					clock-output-names = "refclk624mhz";
+				};
+				pj1_refclk: refclk_pj1 {
+					compatible = "marvell,mmp-mpmu-clkmux";
+					#clock-cells = <0>;
+					clocks = <&pll1_312m &pll1_624m &pll2>;
+					clock-output-names = "refclk_pj1";
+					/* register value of each item */
+					marvell,mmp-clk-sel = <0 0x20000000 0x40000000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x8 0xe0000000>;
+				};
+				ddr_refclk: refclk_ddr {
+					compatible = "marvell,mmp-mpmu-clkmux";
+					#clock-cells = <0>;
+					clocks = <&pll1_312m &pll1_624m &pll2>;
+					clock-output-names = "refclk_ddr";
+					/* register value of each item */
+					marvell,mmp-clk-sel = <0 0x00800000 0x01000000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x8 0x01800000>;
+				};
+				axi_refclk: refclk_axi {
+					compatible = "marvell,mmp-mpmu-clkmux";
+					#clock-cells = <0>;
+					clocks = <&pll1_312m &pll1_624m>;
+					clock-output-names = "refclk_axi";
+					/* register value of each item */
+					marvell,mmp-clk-sel = <0 0x00080000>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x8 0x00080000>;
+				};
+			};
 
 			timer0: timer@14000 {
 				compatible = "mrvl,mmp-timer";

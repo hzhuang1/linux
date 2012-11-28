@@ -215,6 +215,8 @@ static struct of_device_id mmp_timer_dt_ids[] = {
 	{}
 };
 
+extern void __init mmp_init_clocks(void);
+
 void __init mmp_dt_init_timer(void)
 {
 	struct device_node *np;
@@ -225,6 +227,8 @@ void __init mmp_dt_init_timer(void)
 		ret = -ENODEV;
 		goto out;
 	}
+
+	mmp_init_clocks();
 
 	irq = irq_of_parse_and_map(np, 0);
 	if (!irq) {
