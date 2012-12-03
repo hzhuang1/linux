@@ -34,9 +34,15 @@
 			};
 			uart1: uart@17000 {
 				status = "okay";
+				clocks = <&uart1_clk>;
+			};
+			gpio@19000 {
+				status = "okay";
+				clocks = <&gpio_clk>;
 			};
 			twsi1: i2c@11000 {
 				status = "okay";
+				clocks = <&twsi1_clk>;
 
 				pmic: 88pm860x@34 {
 					compatible = "marvell,88pm860x";
@@ -177,6 +183,7 @@
 			};
 			rtc: rtc@10000 {
 				status = "okay";
+				clocks = <&rtc_clk>;
 			};
 		};
 	};

@@ -139,13 +139,13 @@
 				reg = <0x50000 0x1100>;
 				ranges = <0 0x50000 0x1100>;
 
-				osc_32k: refclk32khz {
+				osc_32k: osc32khz {
 					compatible = "fixed-clock";
 					#clock-cells = <0>;
 					clock-frequency = <32768>;
 					clock-output-names = "osc32khz";
 				};
-				osc_26m: refclk26mhz {
+				osc_26m: osc26mhz {
 					compatible = "fixed-clock";
 					#clock-cells = <0>;
 					clock-frequency = <26000000>;
@@ -195,6 +195,153 @@
 					/* register offset & mask */
 					marvell,mmp-clk-reg = <0x8 0x00080000>;
 				};
+				refclk156m: refclk156mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&pll1_312m>;
+					clock-output-names = "refclk156mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 2>;
+				};
+				refclk118m: refclk117mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk156m>;
+					/* 117.9648MHz */
+					clock-output-names = "refclk118mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <6144 8125>;
+				};
+				refclk104m: refclk104mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&pll1_312m>;
+					clock-output-names = "refclk104mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 3>;
+				};
+				refclk59m: refclk59mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk118m>;
+					clock-names = "baud_58.98mhz";
+					/* 58.9824MHz */
+					clock-output-names = "refclk59mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 2>;
+				};
+				refclk52m: refclk52mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk104m>;
+					clock-output-names = "refclk52mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 2>;
+				};
+				refclk48m: refclk48mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&pll1_624m>;
+					clock-output-names = "refclk48mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 13>;
+				};
+				refclk32m: refclk32mhz@ {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk48m>;
+					clock-output-names = "refclk32mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <2 3>;
+				};
+				refclk26m: refclk26mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk52m>;
+					clock-output-names = "refclk26mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <1 2>;
+				};
+				refclk15m: refclk15mhz {
+					compatible = "marvell,mmp-fixed-clkfactor";
+					#clock-cells = <0>;
+					clocks = <&refclk156m>;
+					clock-names = "baud_14.86mhz";
+					/* 14.857MHz */
+					clock-output-names = "refclk15mhz";
+					/* multiple & divider */
+					marvell,mmp-fixed-factor = <2 21>;
+				};
+			};
+
+			apbc: clocks@15000 {
+				compatible = "marvell,mmp-apbc";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0x15000 0x100>;
+				ranges = <0 0x15000 0x100>;
+
+				twsi1_clk: twsi1_clk {
+					compatible = "marvell,mmp-apbc-clk";
+					#clock-cells = <0>;
+					clocks = <&refclk32m>;
+					clock-names = "twsi1_clk";
+					/* register value of each item */
+					marvell,mmp-clk-sel = <0>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x2c 0x70>;
+					marvell,mmp-clk-delay = <10>;
+				};
+				rtc_clk: rtc_clk {
+					compatible = "marvell,mmp-apbc-clk";
+					#clock-cells = <0>;
+					clocks = <&osc_32k>;
+					clock-names = "rtc_clk";
+					marvell,mmp-clk-sel = <0>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x28 0x70>;
+					marvell,mmp-apbc-power-ctl;
+					marvell,mmp-clk-delay = <10>;
+				};
+				gpio_clk: gpio_clk {
+					compatible = "marvell,mmp-apbc-clk";
+					#clock-cells = <0>;
+					clocks = <&refclk26m>;
+					clock-names = "gpio_clk";
+					marvell,mmp-clk-sel = <0>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x8 0x0>;
+					marvell,mmp-clk-delay = <10>;
+				};
+				uart1_clk: uart1_clk {
+					compatible = "marvell,mmp-apbc-clk";
+					#clock-cells = <0>;
+					clocks = <&refclk59m &refclk15m>;
+					clock-names = "uart1_clk";
+					/* register value of each item */
+					marvell,mmp-clk-sel = <0 0x10>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x0 0x70>;
+					marvell,mmp-clk-delay = <10>;
+				};
+			};
+
+			apbcp: clocks@3b000 {
+				compatible = "marvell,mmp-apbcp";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0x3b000 0x100>;
+				ranges = <0 0x3b000 0x100>;
+
+				twsi2_clk: refclk32mhz@2 {
+					compatible = "marvell,mmp-apbcp-clock";
+					#clock-cells = <0>;
+					clocks = <&refclk32m>;
+					clock-output-names = "twsi2_clk";
+					marvell,mmp-clk-sel = <0>;
+					/* register offset & mask */
+					marvell,mmp-clk-reg = <0x28 0x70>;
+				};
 			};
 
 			timer0: timer@14000 {
@@ -243,6 +390,7 @@
 				interrupt-controller;
 				#interrupt-cells = <1>;
 				ranges = <0 0x19000 0x1000>;
+				status = "disabled";
 
 				gcb0: gpio@0 {
 					reg = <0x0 0x4>;
