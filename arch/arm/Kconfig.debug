@@ -233,6 +233,13 @@ choice
 		  Say Y here if you want kernel low-level debugging support
 		  on i.MX6Q.
 
+	config DEBUG_HI3620_UART0
+		bool "Hisilicon HI3620 Debug UART0"
+		depends on ARCH_HS
+		help
+		  Say Y here if you want kernel low-level debugging support
+		  on HI3620 UART0.
+
 	config DEBUG_MMP_UART2
 		bool "Kernel low-level debugging message via MMP UART2"
 		depends on ARCH_MMP
@@ -500,6 +507,7 @@ config DEBUG_LL_INCLUDE
 				 DEBUG_IMX50_IMX53_UART ||\
 				 DEBUG_IMX6Q_UART
 	default "debug/highbank.S" if DEBUG_HIGHBANK_UART
+	default "debug/hisilicon.S" if DEBUG_HI3620_UART0 || DEBUG_HI3620_UART4
 	default "debug/mvebu.S" if DEBUG_MVEBU_UART
 	default "debug/picoxcell.S" if DEBUG_PICOXCELL_UART
 	default "debug/socfpga.S" if DEBUG_SOCFPGA_UART
