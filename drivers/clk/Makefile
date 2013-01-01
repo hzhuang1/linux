@@ -11,6 +11,7 @@ obj-$(CONFIG_COMMON_CLK)	+= clk-mux.o
 # SoCs specific
 obj-$(CONFIG_ARCH_BCM2835)	+= clk-bcm2835.o
 obj-$(CONFIG_ARCH_NOMADIK)	+= clk-nomadik.o
+obj-$(CONFIG_ARCH_HI3xxx)	+= clk-hi3xxx.o
 obj-$(CONFIG_ARCH_HIGHBANK)	+= clk-highbank.o
 obj-$(CONFIG_ARCH_MXS)		+= mxs/
 obj-$(CONFIG_ARCH_SOCFPGA)	+= socfpga/
