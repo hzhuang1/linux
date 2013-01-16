@@ -128,20 +128,21 @@ static int gpiochip_find_base(int ngpio)
 	int spare = 0;
 	int base = -ENOSPC;
 
-	for (i = ARCH_NR_GPIOS - 1; i >= 0 ; i--) {
+	for (i = 0, base = 0; i < ARCH_NR_GPIOS; i++) {
 		struct gpio_desc *desc = &gpio_desc[i];
 		struct gpio_chip *chip = desc->chip;
 
-		if (!chip && !test_bit(FLAG_RESERVED, &desc->flags)) {
-			spare++;
-			if (spare == ngpio) {
-				base = i;
-				break;
-			}
-		} else {
+		if (chip) {
 			spare = 0;
-			if (chip)
-				i -= chip->ngpio - 1;
+			i += chip->ngpio - 1;
+			base = i + 1;
+		} else if (test_bit(FLAG_RESERVED, &desc->flags)) {
+			spare = 0;
+			base = i + 1;
+		} else {
+			spare++;
+			if (spare == ngpio)
+				break;
 		}
 	}
 
