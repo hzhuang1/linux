@@ -245,15 +245,12 @@ static void of_gpiochip_add_pin_range(struct gpio_chip *chip)
 		 * to add different ranges for one and the same GPIO chip,
 		 * as the code assumes that we have one consecutive range
 		 * on both, mapping 1-to-1.
-		 *
-		 * TODO: make the OF bindings handle multiple sparse ranges
-		 * on the same GPIO chip.
 		 */
 		ret = gpiochip_add_pin_range(chip,
 					     pinctrl_dev_get_devname(pctldev),
-					     0, /* offset in gpiochip */
 					     pinspec.args[0],
-					     pinspec.args[1]);
+					     pinspec.args[1],
+					     pinspec.args[2]);
 
 		if (ret)
 			break;
