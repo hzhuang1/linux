@@ -15,6 +15,7 @@
 #include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/irq.h>
+#include <linux/irqdomain.h>
 #include <linux/bitops.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
@@ -211,6 +212,10 @@ static void __init pl061_init_gc(struct pl061_gpio *chip, int irq_base)
 			       IRQ_GC_INIT_NESTED_LOCK, IRQ_NOREQUEST, 0);
 }
 
+static const struct irq_domain_ops pl061_domain_ops = {
+	.xlate	= irq_domain_xlate_twocell,
+};
+
 static int pl061_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	struct device *dev = &adev->dev;
@@ -225,10 +230,14 @@ static int pl061_probe(struct amba_device *adev, const struct amba_id *id)
 	if (pdata) {
 		chip->gc.base = pdata->gpio_base;
 		chip->irq_base = pdata->irq_base;
-	} else if (adev->dev.of_node) {
+	} else {
 		chip->gc.base = -1;
-		chip->irq_base = 0;
-	} else
+		chip->irq_base = irq_alloc_descs(-1, 0, PL061_GPIO_NR, 0);
+		if (chip->irq_base < 0)
+			return chip->irq_base;
+	}
+	if (!irq_domain_add_legacy(adev->dev.of_node, PL061_GPIO_NR,
+				   chip->irq_base, 0, &pl061_domain_ops, chip))
 		return -ENODEV;
 
 	if (!devm_request_mem_region(dev, adev->res.start,
