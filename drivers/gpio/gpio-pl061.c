@@ -23,6 +23,7 @@
 #include <linux/amba/bus.h>
 #include <linux/amba/pl061.h>
 #include <linux/slab.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <asm/mach/irq.h>
 
@@ -60,6 +61,23 @@ struct pl061_gpio {
 	struct pl061_context_save_regs csave_regs;
 #endif
 };
+
+static int pl061_gpio_request(struct gpio_chip *chip, unsigned offset)
+{
+	/*
+	 * Map back to global GPIO space and request muxing, the direction
+	 * parameter does not matter for this controller.
+	 */
+	int gpio = chip->base + offset;
+
+	/*
+	 * Do NOT check the return value at here. Since sometimes the gpio
+	 * pin needn't to be configured in pinmux controller. So it's
+	 * impossible to find the matched gpio range.
+	 */
+	pinctrl_request_gpio(gpio);
+	return 0;
+}
 
 static int pl061_direction_input(struct gpio_chip *gc, unsigned offset)
 {
@@ -251,6 +269,7 @@ static int pl061_probe(struct amba_device *adev, const struct amba_id *id)
 
 	spin_lock_init(&chip->lock);
 
+	chip->gc.request = pl061_gpio_request;
 	chip->gc.direction_input = pl061_direction_input;
 	chip->gc.direction_output = pl061_direction_output;
 	chip->gc.get = pl061_get_value;
