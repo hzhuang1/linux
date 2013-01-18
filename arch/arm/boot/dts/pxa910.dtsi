@@ -93,28 +93,37 @@
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0xd4019000 0x1000>;
-				gpio-controller;
-				#gpio-cells = <2>;
+				marvell,gpio-ed-mask = <1>;
+				marvell,nr-gpios = <128>;
 				interrupts = <49>;
 				interrupt-names = "gpio_mux";
 				interrupt-controller;
 				#interrupt-cells = <1>;
+				status = "disabled";
 				ranges;
 
 				gcb0: gpio@d4019000 {
 					reg = <0xd4019000 0x4>;
+					gpio-controller;
+					#gpio-cells = <2>;
 				};
 
 				gcb1: gpio@d4019004 {
 					reg = <0xd4019004 0x4>;
+					gpio-controller;
+					#gpio-cells = <2>;
 				};
 
 				gcb2: gpio@d4019008 {
 					reg = <0xd4019008 0x4>;
+					gpio-controller;
+					#gpio-cells = <2>;
 				};
 
 				gcb3: gpio@d4019100 {
 					reg = <0xd4019100 0x4>;
+					gpio-controller;
+					#gpio-cells = <2>;
 				};
 			};
 
@@ -143,6 +152,22 @@
 				interrupts = <5 6>;
 				interrupt-names = "rtc 1Hz", "rtc alarm";
 				status = "disabled";
+			};
+
+			pmx: pinmux@d401e000 {
+				compatible = "pinconf-single";
+				reg = <0xd401e000 0x330>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				#gpio-range-cells = <3>;
+				ranges;
+
+				pinctrl-single,register-width = <32>;
+				pinctrl-single,function-mask = <7>;
+
+				range: gpio-range {
+					#pinctrl-single,gpio-range-cells = <3>;
+				};
 			};
 		};
 	};
