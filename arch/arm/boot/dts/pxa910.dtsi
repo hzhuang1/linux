@@ -95,6 +95,11 @@
 				reg = <0xd4019000 0x1000>;
 				gpio-controller;
 				#gpio-cells = <2>;
+				/* <phandle gpio_offset pin_offset nr_pins> */
+				gpio-ranges = <	&pmx 0 55 55 &pmx 55 188 12
+						&pmx 67 110 43 &pmx 110 166 7
+						&pmx 117 45 4 &pmx 121 203 1
+						&pmx 122 50 4 &pmx 126 27 2>;
 				interrupts = <49>;
 				interrupt-names = "gpio_mux";
 				interrupt-controller;
@@ -143,6 +148,36 @@
 				interrupts = <5 6>;
 				interrupt-names = "rtc 1Hz", "rtc alarm";
 				status = "disabled";
+			};
+
+			pmx: pinmux@d401e000 {
+				compatible = "pinctrl-single";
+				reg = <0xd401e000 0x330>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				#gpio-range-cells = <3>;
+				ranges;
+
+				pinctrl-single,register-width = <32>;
+				pinctrl-single,function-mask = <7>;
+				/* pin base, nr pins & gpio function */
+				pinctrl-single,gpio-range = <
+						&range 55 55 0	/* GPIO0 ~ GPIO54 */
+						&range 188 5 1	/* GPIO55 ~ GPIO59 */ 
+						&range 193 7 0	/* GPIO60 ~ GPIO66 */
+						&range 110 43 0	/* GPIO67 ~ GPIO109 */
+						&range 166 7 0	/* GPIO110 ~ GPIO116 */
+						&range 45 4 0	/* GPIO117 ~ GPIO120 */
+						&range 50 2 1	/* GPIO122 ~ GPIO123 */
+						&range 203 1 0	/* GPIO121 */
+						&range 52 1 0	/* GPIO124 */
+						&range 53 1 1	/* GPIO125 */
+						&range 27 2 0	/* GPIO126 ~ GPIO127 */
+					>;
+
+				range: gpio-range {
+					#pinctrl-single,gpio-range-cells = <3>;
+				};
 			};
 		};
 	};
