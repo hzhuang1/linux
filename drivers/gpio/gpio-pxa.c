@@ -60,6 +60,8 @@
 
 #define BANK_OFF(n)	(((n) < 3) ? (n) << 2 : 0x100 + (((n) - 3) << 2))
 
+#define PXA_BANK_NR_GPIOS	32
+
 int pxa_last_gpio;
 static int irq_base;
 
@@ -70,8 +72,11 @@ static struct device_node *pxa_gpio_of_node;
 
 struct pxa_gpio_chip {
 	struct gpio_chip chip;
+	struct clk	*clk;
+	int		irq_base;
 	void __iomem	*regbase;
-	char label[10];
+	unsigned	gpio_offset;
+	unsigned	nr_gpios;
 
 	unsigned long	irq_mask;
 	unsigned long	irq_edge_rise;
@@ -128,8 +133,10 @@ static inline int gpio_is_mmp_type(int type)
  */
 static inline int __gpio_is_inverted(int gpio)
 {
+#if 0
 	if ((gpio_type == PXA26X_GPIO) && (gpio > 85))
 		return 1;
+#endif
 	return 0;
 }
 
@@ -170,14 +177,11 @@ static inline int __gpio_is_occupied(unsigned gpio)
 	return ret;
 }
 
-static int pxa_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
+static int pxa_gpio_to_irq(struct gpio_chip *gc, unsigned offset)
 {
-	return chip->base + offset + irq_base;
-}
-
-int pxa_irq_to_gpio(int irq)
-{
-	return irq - irq_base;
+	struct pxa_gpio_chip *chip;
+	chip = container_of(gc, struct pxa_gpio_chip, chip);
+	return chip->irq_base + offset;
 }
 
 static int pxa_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
@@ -250,6 +254,7 @@ static int pxa_gpio_of_xlate(struct gpio_chip *gc,
 }
 #endif
 
+#if 0
 static int pxa_init_gpio_chip(int gpio_end,
 					int (*set_wake)(unsigned int, unsigned int))
 {
@@ -290,6 +295,7 @@ static int pxa_init_gpio_chip(int gpio_end,
 	pxa_gpio_chips = chips;
 	return 0;
 }
+#endif
 
 /* Update only those GRERx and GFERx edge detection register bits if those
  * bits are set in c->irq_mask
@@ -308,11 +314,9 @@ static inline void update_edge_detect(struct pxa_gpio_chip *c)
 
 static int pxa_gpio_irq_type(struct irq_data *d, unsigned int type)
 {
-	struct pxa_gpio_chip *c;
-	int gpio = pxa_irq_to_gpio(d->irq);
+	struct pxa_gpio_chip *c = (struct pxa_gpio_chip *)d->domain->host_data;
+	int gpio = d->irq - c->irq_base + c->chip.base;
 	unsigned long gpdr, mask = GPIO_bit(gpio);
-
-	c = gpio_to_pxachip(gpio);
 
 	if (type == IRQ_TYPE_PROBE) {
 		/* Don't mess with enabled GPIOs using preconfigured edges or
@@ -383,16 +387,16 @@ static void pxa_gpio_demux_handler(unsigned int irq, struct irq_desc *desc)
 
 static void pxa_ack_muxed_gpio(struct irq_data *d)
 {
-	int gpio = pxa_irq_to_gpio(d->irq);
-	struct pxa_gpio_chip *c = gpio_to_pxachip(gpio);
+	struct pxa_gpio_chip *c = (struct pxa_gpio_chip *)d->domain->host_data;
+	int gpio = d->irq - c->irq_base + c->chip.base;
 
 	writel_relaxed(GPIO_bit(gpio), c->regbase + GEDR_OFFSET);
 }
 
 static void pxa_mask_muxed_gpio(struct irq_data *d)
 {
-	int gpio = pxa_irq_to_gpio(d->irq);
-	struct pxa_gpio_chip *c = gpio_to_pxachip(gpio);
+	struct pxa_gpio_chip *c = (struct pxa_gpio_chip *)d->domain->host_data;
+	int gpio = d->irq - c->irq_base + c->chip.base;
 	uint32_t grer, gfer;
 
 	c->irq_mask &= ~GPIO_bit(gpio);
@@ -405,8 +409,8 @@ static void pxa_mask_muxed_gpio(struct irq_data *d)
 
 static int pxa_gpio_set_wake(struct irq_data *d, unsigned int on)
 {
-	int gpio = pxa_irq_to_gpio(d->irq);
-	struct pxa_gpio_chip *c = gpio_to_pxachip(gpio);
+	struct pxa_gpio_chip *c = (struct pxa_gpio_chip *)d->domain->host_data;
+	int gpio = d->irq - c->irq_base + c->chip.base;
 
 	if (c->set_wake)
 		return c->set_wake(gpio, on);
@@ -416,8 +420,8 @@ static int pxa_gpio_set_wake(struct irq_data *d, unsigned int on)
 
 static void pxa_unmask_muxed_gpio(struct irq_data *d)
 {
-	int gpio = pxa_irq_to_gpio(d->irq);
-	struct pxa_gpio_chip *c = gpio_to_pxachip(gpio);
+	struct pxa_gpio_chip *c = (struct pxa_gpio_chip *)d->domain->host_data;
+	int gpio = d->irq - c->irq_base + c->chip.base;
 
 	c->irq_mask |= GPIO_bit(gpio);
 	update_edge_detect(c);
@@ -469,13 +473,6 @@ static int pxa_gpio_nums(void)
 	return count;
 }
 
-#ifdef CONFIG_OF
-static struct of_device_id pxa_gpio_dt_ids[] = {
-	{ .compatible = "mrvl,pxa-gpio" },
-	{ .compatible = "mrvl,mmp-gpio", .data = (void *)MMP_GPIO },
-	{}
-};
-
 static int pxa_irq_domain_map(struct irq_domain *d, unsigned int irq,
 			      irq_hw_number_t hw)
 {
@@ -488,6 +485,14 @@ static int pxa_irq_domain_map(struct irq_domain *d, unsigned int irq,
 const struct irq_domain_ops pxa_irq_domain_ops = {
 	.map	= pxa_irq_domain_map,
 	.xlate	= irq_domain_xlate_twocell,
+};
+
+#if 0
+#ifdef CONFIG_OF
+static struct of_device_id pxa_gpio_dt_ids[] = {
+	{ .compatible = "mrvl,pxa-gpio" },
+	{ .compatible = "mrvl,mmp-gpio", .data = (void *)MMP_GPIO },
+	{}
 };
 
 static int pxa_gpio_probe_dt(struct platform_device *pdev)
@@ -634,6 +639,100 @@ static int pxa_gpio_probe(struct platform_device *pdev)
 	irq_set_chained_handler(irq_mux, pxa_gpio_demux_handler);
 	return 0;
 }
+#endif
+
+static int pxa_gpio_probe(struct platform_device *pdev)
+{
+	struct device_node *np = pdev->dev.of_node;
+	struct pxa_gpio_platform_data *pdata = platform_get_drvdata(pdev);
+	struct pxa_gpio_chip *chip;
+	struct resource *res;
+	void __iomem *base;
+	int irq0, irq1, irq_mux, ret;
+
+	/*
+	 * irq0 & irq1 exist in old PXA chips. GPIO0 is using irq0,
+	 * GPIO1 is using irq1, and others are using irq_mux.
+	 */
+	irq0 = platform_get_irq_byname(pdev, "gpio0");
+	irq1 = platform_get_irq_byname(pdev, "gpio1");
+	irq_mux = platform_get_irq_byname(pdev, "gpio_mux");
+	if ((irq0 >= 0 && irq1 < 0) || (irq0 < 0 && irq1 >= 0)
+		|| (irq_mux < 0))
+		return -EINVAL;
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res)
+		return -ENODEV;
+
+	chip = devm_kzalloc(&pdev->dev, sizeof(*chip), GFP_KERNEL);
+	if (!chip)
+		return -ENOMEM;
+	chip->regbase = devm_ioremap(&pdev->dev, res->start,
+				     resource_size(res));
+	if (!chip->regbase)
+		return -ENOMEM;
+
+	if (!pdata) {
+		ret = of_property_read_u32(np, "marvell,nr-gpios",
+					   &chip->nr_gpios);
+		if (ret < 0)
+			chip->nr_gpios = PXA_BANK_NR_GPIOS;
+	} else {
+		chip->nr_gpios = pdata->nr_gpios;
+		chip->set_wake = pdata->gpio_set_wake;
+	}
+	if (chip->nr_gpios < 0 || chip->nr_gpios > PXA_BANK_NR_GPIOS) {
+		dev_err(&pdev->dev, "Invalid gpio numbers for the chip:%d\n",
+			chip->nr_gpios);
+		return -EINVAL;
+	}
+
+	chip->irq_base = irq_alloc_descs(-1, 0, chip->nr_gpios, 0);
+	if (chip->irq_base < 0) {
+		dev_err(&pdev->dev, "Failed to allocate IRQ numbers\n");
+		return -EINVAL;
+	}
+	if (!irq_domain_add_legacy(np, chip->nr_gpios, chip->irq_base, 0,
+				       &pxa_irq_domain_ops, chip)) {
+		ret = -ENODEV;
+		goto err;
+	}
+#if 0
+	chip->clk = clk_get(&pdev->dev, NULL);
+	if (IS_ERR(chip->clk)) {
+		dev_err(&pdev->dev, "Error %ld to get gpio clock\n",
+			PTR_ERR(chip->clk));
+		return PTR_ERR(chip->clk);
+	}
+	ret = clk_prepare_enable(chip->clk);
+	if (ret) {
+		clk_put(chip->clk);
+		dev_err(&pdev->dev, "Failed to enable gpio clock\n");
+		return ret;
+	}
+#endif
+
+	chip->chip.base = -1;
+	chip->chip.label = dev_name(&pdev->dev);
+	chip->chip.direction_input = pxa_gpio_direction_input;
+	chip->chip.direction_output = pxa_gpio_direction_output;
+	chip->chip.get = pxa_gpio_get;
+	chip->chip.set = pxa_gpio_set;
+	chip->chip.to_irq = pxa_gpio_to_irq;
+	chip->chip.ngpio = chip->nr_gpios;
+	chip->chip.dev = &pdev->dev;
+	chip->chip.owner = THIS_MODULE;
+	gpiochip_add(&chip->chip);
+	return 0;
+err:
+	irq_free_descs(chip->irq_base, chip->nr_gpios);
+	return ret;
+}
+
+static struct of_device_id pxa_gpio_dt_ids[] = {
+	{ .compatible = "marvell,pxa-gpio" },
+	{}
+};
 
 static struct platform_driver pxa_gpio_driver = {
 	.probe		= pxa_gpio_probe,

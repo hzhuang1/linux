@@ -88,39 +88,66 @@
 				status = "disabled";
 			};
 
-			gpio@d4019000 {
-				compatible = "mrvl,mmp-gpio";
+			gpio0: gpio@d4019000 {
+				compatible = "marvell,pxa-gpio";
 				#address-cells = <1>;
 				#size-cells = <1>;
 				reg = <0xd4019000 0x1000>;
 				gpio-controller;
 				#gpio-cells = <2>;
-				/* <phandle gpio_offset pin_offset nr_pins> */
-				gpio-ranges = <	&pmx 0 55 55 &pmx 55 188 12
-						&pmx 67 110 43 &pmx 110 166 7
-						&pmx 117 45 4 &pmx 121 203 1
-						&pmx 122 50 4 &pmx 126 27 2>;
+				/* <phandle gpio_offset_in_chip pin_offset nr_pins> */
+				gpio-ranges = < &pmx 0 55 32>;
 				interrupts = <49>;
 				interrupt-names = "gpio_mux";
 				interrupt-controller;
 				#interrupt-cells = <1>;
-				ranges;
+			};
 
-				gcb0: gpio@d4019000 {
-					reg = <0xd4019000 0x4>;
-				};
+			gpio1: gpio@d4019004 {
+				compatible = "marvell,pxa-gpio";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0xd4019004 0x1000>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				/* <phandle gpio_offset_in_chip pin_offset nr_pins> */
+				gpio-ranges = <&pmx 0 87 23 &pmx 23 188 9>;
+				interrupts = <49>;
+				interrupt-names = "gpio_mux";
+				interrupt-controller;
+				#interrupt-cells = <1>;
+			};
 
-				gcb1: gpio@d4019004 {
-					reg = <0xd4019004 0x4>;
-				};
+			gpio2: gpio@d4019008 {
+				compatible = "marvell,pxa-gpio";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0xd4019008 0x1000>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				/* <phandle gpio_offset_in_chip pin_offset nr_pins> */
+				gpio-ranges = <&pmx 0 197 3 &pmx 3 110 29>;
+				interrupts = <49>;
+				interrupt-names = "gpio_mux";
+				interrupt-controller;
+				#interrupt-cells = <1>;
+			};
 
-				gcb2: gpio@d4019008 {
-					reg = <0xd4019008 0x4>;
-				};
-
-				gcb3: gpio@d4019100 {
-					reg = <0xd4019100 0x4>;
-				};
+			gpio3: gpio@d4019100 {
+				compatible = "marvell,pxa-gpio";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				reg = <0xd4019100 0x1000>;
+				gpio-controller;
+				#gpio-cells = <2>;
+				/* <phandle gpio_offset_in_chip pin_offset nr_pins> */
+				gpio-ranges = < &pmx 0 139 14 &pmx 14 166 7
+						&pmx 21 45 4 &pmx 25 203 1
+						&pmx 26 50 4 &pmx 30 27 2>;
+				interrupts = <49>;
+				interrupt-names = "gpio_mux";
+				interrupt-controller;
+				#interrupt-cells = <1>;
 			};
 
 			twsi1: i2c@d4011000 {
@@ -162,6 +189,10 @@
 				pinctrl-single,function-mask = <7>;
 				/* pin base, nr pins & gpio function */
 				pinctrl-single,gpio-range = <
+					/*
+					 * GPIO number is hardcoded for range at here.
+					 * In gpio chip, GPIO number is not hardcoded for range.
+					 */
 						&range 55 55 0	/* GPIO0 ~ GPIO54 */
 						&range 188 5 1	/* GPIO55 ~ GPIO59 */ 
 						&range 193 7 0	/* GPIO60 ~ GPIO66 */
