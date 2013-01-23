@@ -17,6 +17,7 @@ extern int pxa_irq_to_gpio(struct irq_data *d);
 
 struct pxa_gpio_platform_data {
 	bool ed_mask;	/* true means that ed_mask reg is available */
+	bool inverted;	/* only valid for PXA26x */
 	int (*gpio_set_wake)(unsigned int gpio, unsigned int on);
 };
 
