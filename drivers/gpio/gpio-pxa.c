@@ -23,6 +23,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/syscore_ops.h>
 #include <linux/slab.h>
@@ -157,6 +158,17 @@ int pxa_irq_to_gpio(struct irq_data *d)
 	chip = (struct pxa_gpio_chip *)d->domain->host_data;
 	gpio = d->irq - chip->irq_base + chip->chip.base;
 	return gpio;
+}
+
+static int pxa_gpio_request(struct gpio_chip *gc, unsigned offset)
+{
+	/*
+	 * Map back to global GPIO space and request muxing, the direction
+	 * parameter does not matter for this controller.
+	 */
+	int gpio = gc->base + offset;
+
+	return pinctrl_request_gpio(gpio);
 }
 
 static int pxa_gpio_direction_input(struct gpio_chip *gc, unsigned offset)
@@ -469,6 +481,7 @@ static int pxa_init_gpio_chip(struct platform_device *pdev, int gpio_end,
 		gc->base  = gpio;
 		gc->label = chips[i].label;
 
+		gc->request = pxa_gpio_request;
 		gc->direction_input  = pxa_gpio_direction_input;
 		gc->direction_output = pxa_gpio_direction_output;
 		gc->get = pxa_gpio_get;
