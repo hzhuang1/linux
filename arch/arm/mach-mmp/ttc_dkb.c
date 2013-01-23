@@ -77,6 +77,7 @@ static unsigned long ttc_dkb_pin_config[] __initdata = {
 };
 
 static struct pxa_gpio_platform_data ttc_dkb_gpio_pdata = {
+	.nr_gpios	= 128,
 	.ed_mask	= true,
 };
 

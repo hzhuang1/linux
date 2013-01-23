@@ -380,36 +380,6 @@ static struct irq_chip pxa_muxed_gpio_chip = {
 	.irq_set_wake	= pxa_gpio_set_wake,
 };
 
-static int pxa_gpio_nums(void)
-{
-	int count = 0;
-
-#ifdef CONFIG_ARCH_PXA
-	if (cpu_is_pxa25x()) {
-#ifdef CONFIG_CPU_PXA26x
-		count = 89;
-#elif defined(CONFIG_PXA25x)
-		count = 84;
-#endif /* CONFIG_CPU_PXA26x */
-	} else if (cpu_is_pxa27x()) {
-		count = 120;
-	} else if (cpu_is_pxa93x()) {
-		count = 191;
-	} else if (cpu_is_pxa3xx()) {
-		count = 127;
-	}
-#endif /* CONFIG_ARCH_PXA */
-
-#ifdef CONFIG_ARCH_MMP
-	if (cpu_is_pxa168() || cpu_is_pxa910()) {
-		count = 127;
-	} else if (cpu_is_mmp2()) {
-		count = 191;
-	}
-#endif /* CONFIG_ARCH_MMP */
-	return count;
-}
-
 static int pxa_irq_domain_map(struct irq_domain *d, unsigned int irq,
 			      irq_hw_number_t hw)
 {
@@ -433,7 +403,7 @@ static struct of_device_id pxa_gpio_dt_ids[] = {
 
 static int pxa_gpio_probe_dt(struct platform_device *pdev)
 {
-	int ret, nr_banks, nr_gpios;
+	int ret, nr_banks;
 	struct pxa_gpio_platform_data *pdata;
 	struct device_node *prev, *next, *np = pdev->dev.of_node;
 	const struct of_device_id *of_id =
@@ -451,6 +421,11 @@ static int pxa_gpio_probe_dt(struct platform_device *pdev)
 	/* It's only valid for PXA26x */
 	if (of_find_property(np, "marvell,gpio-inverted", NULL))
 		pdata->inverted = true;
+	ret = of_property_read_u32(np, "marvell,nr-gpios", &pdata->nr_gpios);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "nr-gpios isn't specified\n");
+		return -ENOTSUPP;
+	}
 	/* set the platform data */
 	pdev->dev.platform_data = pdata;
 
@@ -468,8 +443,6 @@ static int pxa_gpio_probe_dt(struct platform_device *pdev)
 		prev = next;
 	}
 	of_node_put(prev);
-	nr_gpios = nr_banks << 5;
-	pxa_last_gpio = nr_gpios - 1;
 
 	return 0;
 err:
@@ -540,14 +513,8 @@ static int pxa_gpio_probe(struct platform_device *pdev)
 	int irq0 = 0, irq1 = 0, irq_mux, gpio_offset = 0;
 
 	ret = pxa_gpio_probe_dt(pdev);
-	if (ret < 0) {
-		pxa_last_gpio = pxa_gpio_nums();
-	} else {
+	if (!ret)
 		use_of = 1;
-	}
-
-	if (!pxa_last_gpio)
-		return -EINVAL;
 
 	irq0 = platform_get_irq_byname(pdev, "gpio0");
 	irq1 = platform_get_irq_byname(pdev, "gpio1");
@@ -581,6 +548,7 @@ static int pxa_gpio_probe(struct platform_device *pdev)
 
 	/* Initialize GPIO chips */
 	info = dev_get_platdata(&pdev->dev);
+	pxa_last_gpio = info->nr_gpios - 1;
 	pxa_init_gpio_chip(pdev, pxa_last_gpio,
 			   info ? info->gpio_set_wake : NULL);
 
