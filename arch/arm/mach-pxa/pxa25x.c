@@ -343,6 +343,7 @@ static struct pxa_gpio_platform_data pxa25x_gpio_info __initdata = {
 #ifdef CONFIG_CPU_PXA26x
 	.inverted = 1,
 #endif
+	.gafr = 1,
 	.gpio_set_wake = gpio_set_wake,
 };
 
