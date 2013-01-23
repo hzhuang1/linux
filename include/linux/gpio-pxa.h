@@ -19,6 +19,7 @@ struct pxa_gpio_platform_data {
 	unsigned ed_mask;	/* not 0 means ed_mask reg is available */
 	unsigned gafr;		/* only valid for PXA25x/PXA26x/PXA27x */
 	unsigned inverted;	/* only valid for PXA26x */
+	unsigned nr_gpios;
 	int (*gpio_set_wake)(unsigned int gpio, unsigned int on);
 };
 

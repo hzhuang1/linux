@@ -342,6 +342,9 @@ void __init pxa25x_map_io(void)
 static struct pxa_gpio_platform_data pxa25x_gpio_info __initdata = {
 #ifdef CONFIG_CPU_PXA26x
 	.inverted = 1,
+	.nr_gpios = 90,
+#else
+	.nr_gpios = 85,
 #endif
 	.gafr = 1,
 	.gpio_set_wake = gpio_set_wake,
