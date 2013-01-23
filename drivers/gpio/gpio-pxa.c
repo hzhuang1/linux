@@ -493,6 +493,7 @@ const struct irq_domain_ops pxa_irq_domain_ops = {
 static int pxa_gpio_probe_dt(struct platform_device *pdev)
 {
 	int ret, nr_banks, nr_gpios;
+	struct pxa_gpio_platform_data *pdata;
 	struct device_node *prev, *next, *np = pdev->dev.of_node;
 	const struct of_device_id *of_id =
 				of_match_device(pxa_gpio_dt_ids, &pdev->dev);
@@ -501,6 +502,13 @@ static int pxa_gpio_probe_dt(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Failed to find gpio controller\n");
 		return -EFAULT;
 	}
+	pdata = devm_kzalloc(&pdev->dev, sizeof(*pdata), GFP_KERNEL);
+	if (!pdata)
+		return -ENOMEM;
+	if (of_find_property(np, "marvell,gpio-ed-mask", NULL))
+		pdata->ed_mask = true;
+	/* set the platform data */
+	pdev->dev.platform_data = pdata;
 	gpio_type = (int)of_id->data;
 
 	next = of_get_next_child(np, NULL);
@@ -604,7 +612,7 @@ static int pxa_gpio_probe(struct platform_device *pdev)
 		writel_relaxed(0, c->regbase + GRER_OFFSET);
 		writel_relaxed(~0,c->regbase + GEDR_OFFSET);
 		/* unmask GPIO edge detect for AP side */
-		if (gpio_is_mmp_type(gpio_type))
+		if (info->ed_mask)
 			writel_relaxed(~0, c->regbase + ED_MASK_OFFSET);
 	}
 

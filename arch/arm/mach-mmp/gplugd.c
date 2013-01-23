@@ -10,6 +10,7 @@
 
 #include <linux/init.h>
 #include <linux/gpio.h>
+#include <linux/gpio-pxa.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -127,6 +128,10 @@ static unsigned long gplugd_pin_config[] __initdata = {
 	GPIO116_I2S_TXD
 };
 
+static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
+	.ed_mask	= true,
+};
+
 static struct i2c_board_info gplugd_i2c_board_info[] = {
 	{
 		.type = "isl1208",
@@ -185,6 +190,8 @@ static void __init gplugd_init(void)
 	pxa168_add_uart(3);
 	pxa168_add_ssp(1);
 	pxa168_add_twsi(0, NULL, ARRAY_AND_SIZE(gplugd_i2c_board_info));
+	platform_device_add_data(&pxa168_device_gpio, &pxa168_gpio_pdata,
+				 sizeof(struct pxa_gpio_platform_data));
 	platform_device_register(&pxa168_device_gpio);
 
 	pxa168_add_eth(&gplugd_eth_platform_data);
