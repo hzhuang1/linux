@@ -431,6 +431,7 @@ void __init pxa27x_set_i2c_power_info(struct i2c_pxa_platform_data *info)
 }
 
 static struct pxa_gpio_platform_data pxa27x_gpio_info __initdata = {
+	.gafr = true,
 	.gpio_set_wake = gpio_set_wake,
 };
 
