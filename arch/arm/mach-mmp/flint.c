@@ -79,6 +79,7 @@ static unsigned long flint_pin_config[] __initdata = {
 };
 
 static struct pxa_gpio_platform_data mmp2_gpio_pdata = {
+	.nr_gpios	= 192,
 	.ed_mask	= true,
 };
 

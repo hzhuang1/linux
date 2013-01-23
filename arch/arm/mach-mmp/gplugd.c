@@ -129,6 +129,7 @@ static unsigned long gplugd_pin_config[] __initdata = {
 };
 
 static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
+	.nr_gpios	= 128,
 	.ed_mask	= true,
 };
 
