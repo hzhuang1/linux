@@ -24,7 +24,13 @@ irqchip_of_match_end __used __section(__irqchip_of_end);
 
 extern struct of_device_id __irqchip_begin[];
 
+#ifdef CONFIG_IRQCHIP
 void __init irqchip_init(void)
 {
 	of_irq_init(__irqchip_begin);
 }
+#else
+static inline void irqchip_init(void)
+{
+}
+#endif

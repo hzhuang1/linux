@@ -180,6 +180,13 @@ struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)
 	unsigned long dt_root;
 	const char *model;
 
+	if (IS_ENABLED(CONFIG_ARCH_MULTIPLATFORM)) {
+		DT_MACHINE_START(GENERIC_DT, "Generic DT based system")
+		MACHINE_END
+
+		mdesc_best = (struct machine_desc *)&__mach_desc_GENERIC_DT;
+	}
+
 	if (!dt_phys)
 		return NULL;
 
@@ -199,7 +206,7 @@ struct machine_desc * __init setup_machine_fdt(unsigned int dt_phys)
 			mdesc_score = score;
 		}
 	}
-	if (!mdesc_best) {
+	if (!mdesc_best && !IS_ENABLED(CONFIG_ARCH_MULTIPLATFORM)) {
 		const char *prop;
 		long size;
 
