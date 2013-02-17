@@ -35,6 +35,7 @@ static unsigned long avengers_lite_pin_config_V16F[] __initdata = {
 
 static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.nr_gpios	= 128,
+	.irq_base	= IRQ_GPIO_START,
 	.ed_mask	= true,
 };
 

@@ -11,6 +11,7 @@
 #include <linux/init.h>
 #include <linux/gpio.h>
 #include <linux/gpio-pxa.h>
+#include <linux/platform_device.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -130,6 +131,7 @@ static unsigned long gplugd_pin_config[] __initdata = {
 
 static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.nr_gpios	= 128,
+	.irq_base	= IRQ_GPIO_START,
 	.ed_mask	= true,
 };
 

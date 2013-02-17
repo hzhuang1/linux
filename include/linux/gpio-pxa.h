@@ -20,6 +20,7 @@ struct pxa_gpio_platform_data {
 	bool inverted;	/* only valid for PXA26x */
 	bool gafr;	/* only valid for PXA25x/PXA26x/PXA27x */
 	unsigned nr_gpios;
+	int irq_base;
 	int (*gpio_set_wake)(unsigned int gpio, unsigned int on);
 };
 

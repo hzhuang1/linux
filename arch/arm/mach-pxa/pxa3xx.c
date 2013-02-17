@@ -438,6 +438,7 @@ void __init pxa3xx_set_i2c_power_info(struct i2c_pxa_platform_data *info)
 
 static struct pxa_gpio_platform_data pxa3xx_gpio_info __initdata = {
 	.nr_gpios = 128,
+	.irq_base = PXA_GPIO_IRQ_BASE,
 };
 
 static struct platform_device *devices[] __initdata = {

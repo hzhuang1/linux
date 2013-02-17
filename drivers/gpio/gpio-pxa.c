@@ -451,9 +451,10 @@ static int pxa_gpio_probe_dt(struct platform_device *pdev)
 #endif
 
 static int pxa_init_gpio_chip(struct platform_device *pdev, int gpio_end,
-			      int (*set_wake)(unsigned int, unsigned int))
+			      struct pxa_gpio_platform_data *pdata)
 {
 	int i, gpio, nbanks = gpio_to_bank(gpio_end) + 1;
+	int irq_base;
 	struct pxa_gpio_chip *chips;
 	struct device_node *next = NULL, *np = NULL;
 
@@ -473,12 +474,17 @@ static int pxa_init_gpio_chip(struct platform_device *pdev, int gpio_end,
 
 		sprintf(chips[i].label, "gpio-%d", i);
 		chips[i].regbase = gpio_reg_base + BANK_OFF(i);
-		chips[i].set_wake = set_wake;
+		if (pdata->gpio_set_wake)
+			chips[i].set_wake = pdata->gpio_set_wake;
 
 		/* number of GPIOs on last bank may be less than 32 */
 		gc->ngpio = (gpio + 31 > gpio_end) ? (gpio_end - gpio + 1) : 32;
 
-		chips[i].irq_base = irq_alloc_descs(-1, 0, gc->ngpio, 0);
+		if (pdata->irq_base)
+			irq_base = pdata->irq_base + gpio;
+		else
+			irq_base = -1;
+		chips[i].irq_base = irq_alloc_descs(irq_base, 0, gc->ngpio, 0);
 		if (chips[i].irq_base < 0)
 			return -EINVAL;
 		if (!irq_domain_add_legacy(pdev->dev.of_node, gc->ngpio,
@@ -557,8 +563,7 @@ static int pxa_gpio_probe(struct platform_device *pdev)
 	/* Initialize GPIO chips */
 	pdata = dev_get_platdata(&pdev->dev);
 	pxa_last_gpio = pdata->nr_gpios - 1;
-	ret = pxa_init_gpio_chip(pdev, pxa_last_gpio,
-				 pdata ? pdata->gpio_set_wake : NULL);
+	ret = pxa_init_gpio_chip(pdev, pxa_last_gpio, pdata);
 	if (ret < 0)
 		return ret;
 

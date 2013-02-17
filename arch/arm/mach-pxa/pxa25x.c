@@ -346,6 +346,7 @@ static struct pxa_gpio_platform_data pxa25x_gpio_info __initdata = {
 #else
 	.nr_gpios = 85,
 #endif
+	.irq_base = PXA_GPIO_IRQ_BASE,
 	.gafr = true,
 	.gpio_set_wake = gpio_set_wake,
 };

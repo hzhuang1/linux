@@ -52,6 +52,7 @@ static unsigned long teton_bga_pin_config[] __initdata = {
 
 static struct pxa_gpio_platform_data pxa168_gpio_pdata = {
 	.nr_gpios	= 128,
+	.irq_base	= IRQ_GPIO_START,
 	.ed_mask	= true,
 };
 
