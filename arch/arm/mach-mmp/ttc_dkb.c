@@ -14,10 +14,12 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/onenand.h>
+#include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/i2c/pca953x.h>
 #include <linux/gpio.h>
 #include <linux/gpio-pxa.h>
+#include <linux/gpio_keys.h>
 #include <linux/mfd/88pm860x.h>
 #include <linux/platform_data/mv_usb.h>
 #include <linux/spi/spi.h>
@@ -51,6 +53,20 @@ static unsigned long ttc_dkb_pin_config[] __initdata = {
 	GPIO47_UART2_RXD,
 	GPIO48_UART2_TXD,
 
+	GPIO0_GPIO | MFP_PULL_LOW,
+	GPIO1_GPIO | MFP_PULL_LOW,
+	GPIO2_GPIO | MFP_PULL_LOW,
+	GPIO3_GPIO | MFP_PULL_LOW,
+	GPIO4_GPIO | MFP_PULL_LOW,
+	GPIO5_GPIO | MFP_PULL_LOW,
+	GPIO6_GPIO | MFP_PULL_LOW,
+	GPIO7_GPIO | MFP_PULL_LOW,
+	GPIO8_GPIO | MFP_PULL_LOW,
+	GPIO9_GPIO | MFP_PULL_LOW,
+	GPIO10_GPIO | MFP_PULL_LOW,
+	GPIO11_GPIO | MFP_PULL_LOW,
+	GPIO12_GPIO | MFP_PULL_LOW,
+
 	/* DFI */
 	DF_IO0_ND_IO0,
 	DF_IO1_ND_IO1,
@@ -80,6 +96,38 @@ static struct pxa_gpio_platform_data ttc_dkb_gpio_pdata = {
 	.nr_gpios	= 128,
 	.irq_base	= IRQ_GPIO_START,
 	.ed_mask	= true,
+};
+
+static struct gpio_keys_button ttc_dkb_gpio_keys_table[] = {
+	{
+		.code			= KEY_RIGHT,
+		.gpio			= 12,
+		.desc			= "gpio-keys: KEY_RIGHT",
+		.type			= EV_KEY,
+		.active_low		= 1,
+		.wakeup			= 1,
+		.debounce_interval	= 1,
+	}, {
+		.code			= KEY_5,
+		.gpio			= 4,
+		.desc			= "gpio-keys: KEY_5",
+		.type			= EV_KEY,
+		.active_low		= 1,
+		.wakeup			= 1,
+		.debounce_interval	= 1,
+	},
+};
+
+static struct gpio_keys_platform_data ttc_dkb_gpio_keys_data = {
+	.buttons	= ttc_dkb_gpio_keys_table,
+	.nbuttons	= ARRAY_SIZE(ttc_dkb_gpio_keys_table),
+};
+
+static struct platform_device ttc_dkb_device_gpiokeys = {
+	.name		= "gpio-keys",
+	.dev		= {
+		.platform_data	= &ttc_dkb_gpio_keys_data,
+	},
 };
 
 static struct mtd_partition ttc_dkb_onenand_partitions[] = {
@@ -138,6 +186,7 @@ static struct platform_device *ttc_dkb_devices[] = {
 	&pxa910_device_gpio,
 	&pxa910_device_rtc,
 	&ttc_dkb_device_onenand,
+	&ttc_dkb_device_gpiokeys,
 };
 
 static struct pca953x_platform_data max7312_data[] = {
