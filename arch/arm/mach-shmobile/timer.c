@@ -60,9 +60,3 @@ void __init shmobile_earlytimer_init(void)
 {
 	late_time_init = shmobile_late_time_init;
 }
-
-void __init shmobile_timer_init(void)
-{
-	arch_timer_of_register();
-	arch_timer_sched_clock_init();
-}

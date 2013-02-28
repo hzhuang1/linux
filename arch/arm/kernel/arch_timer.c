@@ -32,23 +32,12 @@ static void __init arch_timer_delay_timer_register(void)
 	register_current_timer_delay(&arch_delay_timer);
 }
 
-int __init arch_timer_of_register(void)
-{
-	int ret;
-
-	ret = arch_timer_init();
-	if (ret)
-		return ret;
-
-	arch_timer_delay_timer_register();
-
-	return 0;
-}
-
-int __init arch_timer_sched_clock_init(void)
+int __init arch_timer_arch_init(void)
 {
 	if (arch_timer_get_rate() == 0)
 		return -ENXIO;
+
+	arch_timer_delay_timer_register();
 
 	setup_sched_clock_64(arch_timer_read_counter, arch_timer_get_rate());
 	return 0;
