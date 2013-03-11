@@ -45,6 +45,7 @@ static u32 notrace jiffy_sched_clock_read(void)
 }
 
 static u32 __read_mostly (*read_sched_clock)(void) = jiffy_sched_clock_read;
+static u64 __read_mostly (*read_sched_clock_64)(void);
 
 static inline u64 cyc_to_ns(u64 cyc, u32 mult, u32 shift)
 {
@@ -165,14 +166,38 @@ void __init setup_sched_clock(u32 (*read)(void), int bits, unsigned long rate)
 	pr_debug("Registered %pF as sched_clock source\n", read);
 }
 
+void __init setup_sched_clock_64(u64 (*read)(void), unsigned long rate)
+{
+	if (cd.rate > rate)
+		return;
+
+	WARN_ON(!irqs_disabled());
+	read_sched_clock_64 = read;
+	cd.rate = rate;
+
+	/* Cache the sched_clock multiplier to save a divide in the hot path. */
+	cd.mult = NSEC_PER_SEC / rate;
+	cd.shift = 0;
+
+	/* Enable IRQ time accounting if we have a fast enough sched_clock */
+	if (irqtime > 0 || (irqtime == -1 && rate >= 1000000))
+		enable_sched_clock_irqtime();
+
+	pr_debug("Registered %pF as sched_clock source\n", read);
+}
+
 unsigned long long notrace sched_clock(void)
 {
-	u32 cyc = read_sched_clock();
-	return cyc_to_sched_clock(cyc, sched_clock_mask);
+	if (read_sched_clock_64)
+		return cyc_to_ns(read_sched_clock_64(), cd.mult, cd.shift);
+
+	return cyc_to_sched_clock(read_sched_clock(), sched_clock_mask);
 }
 
 void __init sched_clock_postinit(void)
 {
+	if (read_sched_clock_64)
+		return;
 	/*
 	 * If no sched_clock function has been provided at that point,
 	 * make it the final one one.
