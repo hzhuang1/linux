@@ -99,8 +99,11 @@ extern int of_platform_populate(struct device_node *root,
 #endif /* CONFIG_OF_DEVICE */
 
 #if !defined(CONFIG_OF_ADDRESS)
+#define of_default_bus_match_table NULL
 struct of_dev_auxdata;
 struct device;
+struct device_node;
+struct of_device_id;
 static inline int of_platform_populate(struct device_node *root,
 					const struct of_device_id *matches,
 					const struct of_dev_auxdata *lookup,
