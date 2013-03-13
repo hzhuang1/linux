@@ -31,6 +31,7 @@
 
 #include <asm/sched_clock.h>
 #include <asm/hardware/arm_timer.h>
+#include <asm/hardware/timer-sp.h>
 
 static long __init sp804_get_clock_rate(struct clk *clk)
 {
@@ -256,4 +257,33 @@ static void __init sp804_of_init(struct device_node *np)
 	initialized = true;
 }
 CLOCKSOURCE_OF_DECLARE(sp804, "arm,sp804", sp804_of_init);
+
+static void __init integrator_cp_of_init(struct device_node *np)
+{
+	static int init_count = 0;
+	void __iomem *base;
+	int irq;
+	const char *name = of_get_property(np, "compatible", NULL);
+
+	if (init_count == 2 || !of_device_is_available(np))
+		return;
+
+	base = of_iomap(np, 0);
+	if (WARN_ON(!base))
+		return;
+
+	if (!init_count)
+		sp804_clocksource_init(base, name);
+	else {
+		irq = irq_of_parse_and_map(np, 0);
+		if (irq <= 0)
+			return;
+
+		sp804_clockevents_init(base, irq, name);
+	}
+
+	init_count++;
+}
+CLOCKSOURCE_OF_DECLARE(intcp, "arm,integrator-cp-timer", integrator_cp_of_init);
+
 #endif
