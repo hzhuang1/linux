@@ -33,7 +33,6 @@
 #include <mach/platform.h>
 #include <asm/setup.h>
 #include <asm/mach-types.h>
-#include <asm/hardware/arm_timer.h>
 #include <asm/hardware/icst.h>
 
 #include <mach/cm.h>
@@ -267,7 +266,6 @@ static void __init cp_of_timer_init(void)
 	base = of_iomap(node, 0);
 	if (WARN_ON(!base))
 		return;
-	writel(0, base + TIMER_CTRL);
 	sp804_clocksource_init(base, node->name);
 
 	err = of_property_read_string(of_aliases,
@@ -279,7 +277,6 @@ static void __init cp_of_timer_init(void)
 	if (WARN_ON(!base))
 		return;
 	irq = irq_of_parse_and_map(node, 0);
-	writel(0, base + TIMER_CTRL);
 	sp804_clockevents_init(base, irq, node->name);
 }
 
@@ -510,10 +507,6 @@ static void __init intcp_init_irq(void)
 
 static void __init cp_timer_init(void)
 {
-	writel(0, TIMER0_VA_BASE + TIMER_CTRL);
-	writel(0, TIMER1_VA_BASE + TIMER_CTRL);
-	writel(0, TIMER2_VA_BASE + TIMER_CTRL);
-
 	sp804_clocksource_init(TIMER2_VA_BASE, "timer2");
 	sp804_clockevents_init(TIMER1_VA_BASE, IRQ_TIMERINT1, "timer1");
 }

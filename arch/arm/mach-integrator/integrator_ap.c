@@ -643,10 +643,6 @@ static void __init ap_timer_init(void)
 	clk_prepare_enable(clk);
 	rate = clk_get_rate(clk);
 
-	writel(0, TIMER0_VA_BASE + TIMER_CTRL);
-	writel(0, TIMER1_VA_BASE + TIMER_CTRL);
-	writel(0, TIMER2_VA_BASE + TIMER_CTRL);
-
 	integrator_clocksource_init(rate, (void __iomem *)TIMER2_VA_BASE);
 	integrator_clockevent_init(rate, (void __iomem *)TIMER1_VA_BASE,
 				IRQ_TIMERINT1);
