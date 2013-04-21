@@ -2,6 +2,7 @@
 #define __ASM_MACH_PXA168_H
 
 extern void pxa168_timer_init(void);
+extern void __init icu_init_irq(void);
 extern void __init pxa168_init_irq(void);
 extern void pxa168_restart(char, const char *);
 extern void pxa168_clear_keypad_wakeup(void);
