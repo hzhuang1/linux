@@ -37,8 +37,6 @@
 #include <mach/cputype.h>
 #include <asm/mach/time.h>
 
-#include "clock.h"
-
 #define TIMERS_VIRT_BASE	TIMERS1_VIRT_BASE
 
 #define MAX_DELTA		(0xfffffffe)
