@@ -114,7 +114,6 @@ static int __init mmp2_init(void)
 
 	return 0;
 }
-postcore_initcall(mmp2_init);
 
 #define APBC_TIMERS	APBC_REG(0x024)
 
@@ -122,6 +121,7 @@ void __init mmp2_timer_init(void)
 {
 	unsigned long clk_rst;
 
+	mmp2_init();
 	__raw_writel(APBC_APBCLK | APBC_RST, APBC_TIMERS);
 
 	/*

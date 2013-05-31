@@ -100,7 +100,6 @@ static int __init pxa910_init(void)
 
 	return 0;
 }
-postcore_initcall(pxa910_init);
 
 /* system timer - clock enabled, 3.25MHz */
 #define TIMER_CLK_RST	(APBC_APBCLK | APBC_FNCLK | APBC_FNCLKSEL(3))
@@ -108,6 +107,7 @@ postcore_initcall(pxa910_init);
 
 void __init pxa910_timer_init(void)
 {
+	pxa910_init();
 	/* reset and configure */
 	__raw_writel(APBC_APBCLK | APBC_RST, APBC_TIMERS);
 	__raw_writel(TIMER_CLK_RST, APBC_TIMERS);

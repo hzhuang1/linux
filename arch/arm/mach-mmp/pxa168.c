@@ -61,7 +61,6 @@ static int __init pxa168_init(void)
 
 	return 0;
 }
-postcore_initcall(pxa168_init);
 
 /* system timer - clock enabled, 3.25MHz */
 #define TIMER_CLK_RST	(APBC_APBCLK | APBC_FNCLK | APBC_FNCLKSEL(3))
@@ -69,6 +68,7 @@ postcore_initcall(pxa168_init);
 
 void __init pxa168_timer_init(void)
 {
+	pxa168_init();
 	/* this is early, we have to initialize the CCU registers by
 	 * ourselves instead of using clk_* API. Clock rate is defined
 	 * by APBC_TIMERS_CLK_RST (3.25MHz) and enabled free-running

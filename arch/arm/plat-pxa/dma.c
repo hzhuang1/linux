@@ -228,36 +228,46 @@ err_state:
 	return NULL;
 }
 
-static void pxa_dma_init_debugfs(void)
+static int __init pxa_dma_init_debugfs(void)
 {
-	int i;
+	int i, ret;
 	struct dentry *chandir;
 
 	dbgfs_root = debugfs_create_dir(DMA_DEBUG_NAME, NULL);
-	if (IS_ERR(dbgfs_root) || !dbgfs_root)
+	if (IS_ERR(dbgfs_root) || !dbgfs_root) {
+		ret = -EINVAL;
 		goto err_root;
+	}
 
 	dbgfs_state = debugfs_create_file("state", 0400, dbgfs_root, NULL,
 					  &dbg_fops_state);
-	if (!dbgfs_state)
+	if (!dbgfs_state) {
+		ret = -EINVAL;
 		goto err_state;
+	}
 
 	dbgfs_chan = kmalloc(sizeof(*dbgfs_state) * num_dma_channels,
 			     GFP_KERNEL);
-	if (!dbgfs_chan)
+	if (!dbgfs_chan) {
+		ret = -ENOMEM;
 		goto err_alloc;
+	}
 
 	chandir = debugfs_create_dir("channels", dbgfs_root);
-	if (!chandir)
+	if (!chandir) {
+		ret = -EINVAL;
 		goto err_chandir;
+	}
 
 	for (i = 0; i < num_dma_channels; i++) {
 		dbgfs_chan[i] = pxa_dma_dbg_alloc_chan(i, chandir);
-		if (!dbgfs_chan[i])
+		if (!dbgfs_chan[i]) {
+			ret = -EINVAL;
 			goto err_chans;
+		}
 	}
 
-	return;
+	return 0;
 err_chans:
 err_chandir:
 	kfree(dbgfs_chan);
@@ -266,7 +276,9 @@ err_state:
 	debugfs_remove_recursive(dbgfs_root);
 err_root:
 	pr_err("pxa_dma: debugfs is not available\n");
+	return ret;
 }
+late_initcall(pxa_dma_init_debugfs);
 
 static void __exit pxa_dma_cleanup_debugfs(void)
 {
@@ -384,8 +396,6 @@ int __init pxa_init_dma(int irq, int num_ch)
 		return ret;
 	}
 	num_dma_channels = num_ch;
-
-	pxa_dma_init_debugfs();
 
 	return 0;
 }
