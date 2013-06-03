@@ -24,6 +24,9 @@
 
 	soc {
 		apb@d4000000 {
+			timer0: timer@d4014000 {
+				status = "okay";
+			};
 			uart1: uart@d4017000 {
 				status = "okay";
 			};

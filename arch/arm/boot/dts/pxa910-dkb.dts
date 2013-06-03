@@ -24,6 +24,17 @@
 
 	soc {
 		apb@d4000000 {
+			pll2: refclk1001mhz {
+				/* Reference clock for internal PLL2 */
+				compatible = "marvell,mmp-fixed-clkrate";
+				#clock-cells = <0>;
+				clocks = <&osc_26m>;
+				clock-frequency = <1001000000>;
+				clock-output-names = "refclk1001mhz";
+			};
+			timer0: timer@d4014000 {
+				status = "okay";
+			};
 			uart1: uart@d4017000 {
 				status = "okay";
 			};

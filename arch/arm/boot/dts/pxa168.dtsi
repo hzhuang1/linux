@@ -8,6 +8,7 @@
  */
 
 /include/ "skeleton.dtsi"
+/include/ "pxa910-clk.dtsi"
 
 / {
 	aliases {
@@ -53,12 +54,15 @@
 				compatible = "mrvl,mmp-timer";
 				reg = <0xd4014000 0x100>;
 				interrupts = <13>;
+				clocks = <&apbc_timer0_clk>;
+				status = "disabled";
 			};
 
 			uart1: uart@d4017000 {
 				compatible = "mrvl,mmp-uart";
 				reg = <0xd4017000 0x1000>;
 				interrupts = <27>;
+				clocks = <&apbc_uart1_clk>;
 				status = "disabled";
 			};
 
@@ -66,6 +70,7 @@
 				compatible = "mrvl,mmp-uart";
 				reg = <0xd4018000 0x1000>;
 				interrupts = <28>;
+				clocks = <&apbc_uart2_clk>;
 				status = "disabled";
 			};
 
@@ -73,6 +78,7 @@
 				compatible = "mrvl,mmp-uart";
 				reg = <0xd4026000 0x1000>;
 				interrupts = <29>;
+				clocks = <&apbc_uart3_clk>;
 				status = "disabled";
 			};
 
@@ -87,6 +93,7 @@
 				interrupt-names = "gpio_mux";
 				interrupt-controller;
 				#interrupt-cells = <1>;
+				clocks = <&apbc_gpio_clk>;
 				ranges;
 
 				gcb0: gpio@d4019000 {
@@ -111,6 +118,7 @@
 				reg = <0xd4011000 0x1000>;
 				interrupts = <7>;
 				mrvl,i2c-fast-mode;
+				clocks = <&apbc_twsi1_clk>;
 				status = "disabled";
 			};
 
@@ -118,6 +126,7 @@
 				compatible = "mrvl,mmp-twsi";
 				reg = <0xd4025000 0x1000>;
 				interrupts = <58>;
+				clocks = <&apbc_twsi2_clk>;
 				status = "disabled";
 			};
 
@@ -126,6 +135,7 @@
 				reg = <0xd4010000 0x1000>;
 				interrupts = <5 6>;
 				interrupt-names = "rtc 1Hz", "rtc alarm";
+				clocks = <&apbc_rtc_clk>;
 				status = "disabled";
 			};
 		};
