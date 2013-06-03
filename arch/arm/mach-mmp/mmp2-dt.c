@@ -40,7 +40,7 @@ static void __init mmp2_dt_init(void)
 static void __init mmp2_init_timer(void)
 {
 	of_clk_init(NULL);
-	mmp_dt_init_timer();
+	clocksource_of_init();
 }
 
 static const char *mmp2_dt_board_compat[] __initdata = {

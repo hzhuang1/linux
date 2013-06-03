@@ -18,8 +18,6 @@
 
 #include "common.h"
 
-extern void __init mmp_dt_init_timer(void);
-
 static const struct of_dev_auxdata pxa168_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("mrvl,mmp-uart", 0xd4017000, "pxa2xx-uart.0", NULL),
 	OF_DEV_AUXDATA("mrvl,mmp-uart", 0xd4018000, "pxa2xx-uart.1", NULL),
@@ -63,7 +61,7 @@ static const char *mmp_dt_board_compat[] __initdata = {
 static void __init mmp_init_timer(void)
 {
 	of_clk_init(NULL);
-	mmp_dt_init_timer();
+	clocksource_of_init();
 }
 
 DT_MACHINE_START(PXA168_DT, "Marvell PXA168 (Device Tree Support)")

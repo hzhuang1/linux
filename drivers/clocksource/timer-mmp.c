@@ -235,22 +235,12 @@ void __init timer_init(int irq, int mmp2_mode)
 					MIN_DELTA, MAX_DELTA);
 }
 
-#ifdef CONFIG_OF
-static struct of_device_id mmp_timer_dt_ids[] = {
-	{ .compatible = "mrvl,mmp-timer", },
-	{}
-};
-
-void __init mmp_dt_init_timer(void)
+static void __init mmp_dt_init_timer(struct device_node *np)
 {
-	struct device_node *np;
 	struct clk *clk;
-	int irq, ret;
+	int irq;
 	u32 rate = 0;
 
-	np = of_find_matching_node(NULL, mmp_timer_dt_ids);
-	if (!np)
-		return;
 	if (!of_device_is_available(np))
 		return;
 	if (of_property_read_u32(np, "clock-frequency", &rate)) {
@@ -288,4 +278,4 @@ void __init mmp_dt_init_timer(void)
 out:
 	clk_put(clk);
 }
-#endif
+CLOCKSOURCE_OF_DECLARE(mmp_timer, "mrvl,mmp-timer", mmp_dt_init_timer);

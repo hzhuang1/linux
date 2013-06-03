@@ -72,6 +72,12 @@ config CLKSRC_METAG_GENERIC
 	help
 	  This option enables support for the Meta per-thread timers.
 
+config CLKSRC_MMP
+	def_bool y if ARCH_MMP
+	select CLKSRC_OF if OF
+	help
+	  This option enables support for the MMP timer.
+
 config CLKSRC_EXYNOS_MCT
 	def_bool y if ARCH_EXYNOS
 	help
