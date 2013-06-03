@@ -9,6 +9,8 @@
  *  publishhed by the Free Software Foundation.
  */
 
+#include <linux/clk-provider.h>
+#include <linux/clocksource.h>
 #include <linux/io.h>
 #include <linux/irqchip.h>
 #include <linux/of_platform.h>
@@ -16,8 +18,6 @@
 #include <asm/mach/time.h>
 
 #include "common.h"
-
-extern void __init mmp_dt_init_timer(void);
 
 static const struct of_dev_auxdata mmp2_auxdata_lookup[] __initconst = {
 	OF_DEV_AUXDATA("mrvl,mmp-uart", 0xd4030000, "pxa2xx-uart.0", NULL),
@@ -37,6 +37,12 @@ static void __init mmp2_dt_init(void)
 			     mmp2_auxdata_lookup, NULL);
 }
 
+static void __init mmp2_init_timer(void)
+{
+	of_clk_init(NULL);
+	mmp_dt_init_timer();
+}
+
 static const char *mmp2_dt_board_compat[] __initdata = {
 	"mrvl,mmp2-brownstone",
 	NULL,
@@ -45,7 +51,7 @@ static const char *mmp2_dt_board_compat[] __initdata = {
 DT_MACHINE_START(MMP2_DT, "Marvell MMP2 (Device Tree Support)")
 	.map_io		= mmp_map_io,
 	.init_irq	= irqchip_init,
-	.init_time	= mmp_dt_init_timer,
+	.init_time	= mmp2_init_timer,
 	.init_machine	= mmp2_dt_init,
 	.dt_compat	= mmp2_dt_board_compat,
 MACHINE_END

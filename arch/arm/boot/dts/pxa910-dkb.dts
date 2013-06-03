@@ -33,6 +33,7 @@
 				clock-output-names = "refclk1001mhz";
 			};
 			timer0: timer@d4014000 {
+				clock-frequency = <3250000>;
 				status = "okay";
 			};
 			uart1: uart@d4017000 {

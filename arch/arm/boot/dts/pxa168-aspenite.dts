@@ -25,6 +25,7 @@
 	soc {
 		apb@d4000000 {
 			timer0: timer@d4014000 {
+				clock-frequency = <3250000>;
 				status = "okay";
 			};
 			uart1: uart@d4017000 {

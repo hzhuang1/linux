@@ -10,6 +10,7 @@
  */
 
 #include <linux/clk-provider.h>
+#include <linux/clocksource.h>
 #include <linux/irqchip.h>
 #include <linux/of_platform.h>
 #include <asm/mach/arch.h>
@@ -49,7 +50,6 @@ static void __init pxa168_dt_init(void)
 
 static void __init pxa910_dt_init(void)
 {
-	of_clk_init(NULL);
 	of_platform_populate(NULL, of_default_bus_match_table,
 			     pxa910_auxdata_lookup, NULL);
 }
@@ -60,10 +60,16 @@ static const char *mmp_dt_board_compat[] __initdata = {
 	NULL,
 };
 
+static void __init mmp_init_timer(void)
+{
+	of_clk_init(NULL);
+	mmp_dt_init_timer();
+}
+
 DT_MACHINE_START(PXA168_DT, "Marvell PXA168 (Device Tree Support)")
 	.map_io		= mmp_map_io,
 	.init_irq	= irqchip_init,
-	.init_time	= mmp_dt_init_timer,
+	.init_time	= mmp_init_timer,
 	.init_machine	= pxa168_dt_init,
 	.dt_compat	= mmp_dt_board_compat,
 MACHINE_END
@@ -71,7 +77,7 @@ MACHINE_END
 DT_MACHINE_START(PXA910_DT, "Marvell PXA910 (Device Tree Support)")
 	.map_io		= mmp_map_io,
 	.init_irq	= irqchip_init,
-	.init_time	= mmp_dt_init_timer,
+	.init_time	= mmp_init_timer,
 	.init_machine	= pxa910_dt_init,
 	.dt_compat	= mmp_dt_board_compat,
 MACHINE_END

@@ -21,6 +21,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/interrupt.h>
+#include <linux/clk-provider.h>
 #include <linux/clockchips.h>
 
 #include <linux/io.h>
@@ -30,8 +31,6 @@
 #include <linux/of_irq.h>
 
 #include <asm/sched_clock.h>
-#include <mach/irqs.h>
-#include <mach/cputype.h>
 #include <asm/mach/time.h>
 
 #define TMR_CCR		(0x0000)
@@ -182,16 +181,19 @@ static struct clocksource cksrc = {
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 };
 
-static void __init timer_config(void)
+static void __init timer_init_clk(int mmp2_mode)
 {
 	uint32_t ccr = __raw_readl(mmp_timer_base + TMR_CCR);
 
 	__raw_writel(0x0, mmp_timer_base + TMR_CER); /* disable */
 
-	ccr &= (cpu_is_mmp2()) ? (TMR_CCR_CS_0(0) | TMR_CCR_CS_1(0)) :
+	ccr &= mmp2_mode ? (TMR_CCR_CS_0(0) | TMR_CCR_CS_1(0)) :
 		(TMR_CCR_CS_0(3) | TMR_CCR_CS_1(3));
 	__raw_writel(ccr, mmp_timer_base + TMR_CCR);
+}
 
+static void __init timer_config(void)
+{
 	/* set timer 0 to periodic mode, and timer 1 to free-running mode */
 	__raw_writel(0x2, mmp_timer_base + TMR_CMR);
 
@@ -214,11 +216,12 @@ static struct irqaction timer_irq = {
 	.dev_id		= &ckevt,
 };
 
-void __init timer_init(int irq)
+void __init timer_init(int irq, int mmp2_mode)
 {
 	mmp_timer_base = ioremap(TIMERS_PHY_BASE, PAGE_SIZE);
 	BUG_ON(!mmp_timer_base);
 
+	timer_init_clk(mmp2_mode);
 	timer_config();
 
 	setup_sched_clock(mmp_read_sched_clock, 32, CLOCK_TICK_RATE);
@@ -241,27 +244,48 @@ static struct of_device_id mmp_timer_dt_ids[] = {
 void __init mmp_dt_init_timer(void)
 {
 	struct device_node *np;
+	struct clk *clk;
 	int irq, ret;
+	u32 rate = 0;
 
 	np = of_find_matching_node(NULL, mmp_timer_dt_ids);
-	if (!np) {
-		ret = -ENODEV;
-		goto out;
+	if (!np)
+		return;
+	if (!of_device_is_available(np))
+		return;
+	if (of_property_read_u32(np, "clock-frequency", &rate)) {
+		pr_err("failed to find clock-frequency property\n");
+		return;
 	}
-
 	irq = irq_of_parse_and_map(np, 0);
-	if (!irq) {
-		ret = -EINVAL;
-		goto out;
+	if (!irq)
+		return;
+	clk = of_clk_get(np, 0);
+	if (IS_ERR(clk)) {
+		pr_err("failed to get timer clock\n");
+		return;
 	}
 	mmp_timer_base = of_iomap(np, 0);
-	if (!mmp_timer_base) {
-		ret = -ENOMEM;
+	if (!mmp_timer_base)
 		goto out;
-	}
-	timer_init(irq);
+
+	__raw_writel(0x0, mmp_timer_base + TMR_CER); /* disable */
+	if (rate)
+		clk_set_rate(clk, rate);
+	clk_prepare_enable(clk);
+	timer_config();
+
+	setup_sched_clock(mmp_read_sched_clock, 32, rate);
+
+	ckevt.cpumask = cpumask_of(0);
+
+	setup_irq(irq, &timer_irq);
+
+	clocksource_register_hz(&cksrc, rate);
+	clockevents_config_and_register(&ckevt, rate,
+					MIN_DELTA, MAX_DELTA);
 	return;
 out:
-	pr_err("Failed to get timer from device tree with error:%d\n", ret);
+	clk_put(clk);
 }
 #endif
