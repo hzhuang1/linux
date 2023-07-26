@@ -48,7 +48,7 @@ obj-$(CONFIG_CRYPTO_CRCT10DIF_ARM64_CE) += crct10dif-ce.o
 crct10dif-ce-y := crct10dif-ce-core.o crct10dif-ce-glue.o
 
 obj-$(CONFIG_CRYPTO_AES_ARM64_CE) += aes-ce-cipher.o
-aes-ce-cipher-y := aes-ce-core.o aes-ce-glue.o
+aes-ce-cipher-y := aes-ce-core.o aes-ce-glue.o aesv8-armx.o
 
 obj-$(CONFIG_CRYPTO_AES_ARM64_CE_CCM) += aes-ce-ccm.o
 aes-ce-ccm-y := aes-ce-ccm-glue.o aes-ce-ccm-core.o
@@ -90,4 +90,11 @@ $(obj)/%-core.S: $(src)/%-armv8.pl
 $(obj)/sha256-core.S: $(src)/sha512-armv8.pl
 	$(call cmd,perlasm)
 
-clean-files += poly1305-core.S sha256-core.S sha512-core.S
+quiet_cmd_perlasm_64 = PERLASM $@
+      cmd_perlasm_64 = $(PERL) $(<) linux64 > $@
+
+$(obj)/aesv8-armx.S: $(src)/aesv8-armx.pl
+	$(call cmd,perlasm_64)
+
+clean-files += poly1305-core.S sha256-core.S sha512-core.S \
+		aesv8-armx.S
