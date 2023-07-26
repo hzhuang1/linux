@@ -113,6 +113,24 @@ asmlinkage int aes_mac_update(u8 const in[], u32 const rk[], int rounds,
 			      int blocks, u8 dg[], int enc_before,
 			      int enc_after);
 
+#define AES_PERL
+
+#ifdef AES_PERL
+
+#  define AES_MAXNR	14
+
+struct aes_key_st {
+	unsigned int rd_key[4 * (AES_MAXNR + 1)];
+	int rounds;
+};
+typedef struct aes_key_st AES_KEY;
+asmlinkage void aes_v8_set_encrypt_key(const unsigned char *userKey,
+					unsigned int bits, AES_KEY *key);
+asmlinkage void aes_v8_cbc_encrypt(const unsigned char *in, unsigned char *out,
+				   size_t len, const AES_KEY *key,
+				   unsigned char *ivec, const int enc);
+#endif
+
 struct crypto_aes_xts_ctx {
 	struct crypto_aes_ctx key1;
 	struct crypto_aes_ctx __aligned(8) key2;
@@ -219,6 +237,26 @@ static int __maybe_unused ecb_decrypt(struct skcipher_request *req)
 static int cbc_encrypt_walk(struct skcipher_request *req,
 			    struct skcipher_walk *walk)
 {
+#ifdef AES_PERL
+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+	AES_KEY key;
+	int err = 0;
+	unsigned int blocks;
+
+	//key.rounds = 6 + ctx->key_length / 4;
+	//memcpy(key.rd_key, ctx->key_enc, AES_MAX_KEYLENGTH_U32);
+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+		kernel_neon_begin();
+		aes_v8_set_encrypt_key((const unsigned char *)ctx->key_enc,
+					ctx->key_length * 8, &key);
+		aes_v8_cbc_encrypt(walk->src.virt.addr, walk->dst.virt.addr,
+				   walk->nbytes, &key, walk->iv, 1);
+		kernel_neon_end();
+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+	}
+	return err;
+#else
 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
 	int err = 0, rounds = 6 + ctx->key_length / 4;
@@ -232,6 +270,7 @@ static int cbc_encrypt_walk(struct skcipher_request *req,
 		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
 	}
 	return err;
+#endif
 }
 
 static int __maybe_unused cbc_encrypt(struct skcipher_request *req)
