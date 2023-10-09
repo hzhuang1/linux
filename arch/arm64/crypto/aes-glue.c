@@ -126,6 +126,8 @@ struct aes_key_st {
 typedef struct aes_key_st AES_KEY;
 asmlinkage void aes_v8_set_encrypt_key(const unsigned char *userKey,
 					unsigned int bits, AES_KEY *key);
+asmlinkage void aes_v8_set_decrypt_key(const unsigned char *userKey,
+					unsigned int bits, AES_KEY *key);
 asmlinkage void aes_v8_cbc_encrypt(const unsigned char *in, unsigned char *out,
 				   size_t len, const AES_KEY *key,
 				   unsigned char *ivec, const int enc);
@@ -234,22 +236,53 @@ static int __maybe_unused ecb_decrypt(struct skcipher_request *req)
 	return err;
 }
 
+#ifdef AES_PERL
+static void aes_v8_encrypt(struct crypto_aes_ctx *ctx,
+			struct skcipher_walk *walk)
+{
+	AES_KEY key;
+
+	kernel_neon_begin();
+	aes_v8_set_encrypt_key((const unsigned char *)ctx->key_enc,
+				ctx->key_length * 8, &key);
+	aes_v8_cbc_encrypt(walk->src.virt.addr, walk->dst.virt.addr,
+			   walk->nbytes, &key, walk->iv, 1);
+	kernel_neon_end();
+}
+
+static void aes_v8_decrypt(struct crypto_aes_ctx *ctx,
+			struct skcipher_walk *walk)
+{
+	AES_KEY key;
+
+	kernel_neon_begin();
+	aes_v8_set_decrypt_key((const unsigned char *)ctx->key_enc,
+				ctx->key_length * 8, &key);
+	aes_v8_cbc_encrypt(walk->src.virt.addr, walk->dst.virt.addr,
+			   walk->nbytes, &key, walk->iv, 0);
+	kernel_neon_end();
+}
+#endif
+
 static int cbc_encrypt_walk(struct skcipher_request *req,
 			    struct skcipher_walk *walk)
 {
 #ifdef AES_PERL
 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
-	AES_KEY key;
 	int err = 0;
 	unsigned int blocks;
+	AES_KEY key;
 
+	kernel_neon_begin();
+	aes_v8_set_encrypt_key((const unsigned char *)ctx->key_enc,
+				ctx->key_length * 8, &key);
+	kernel_neon_end();
 	//key.rounds = 6 + ctx->key_length / 4;
 	//memcpy(key.rd_key, ctx->key_enc, AES_MAX_KEYLENGTH_U32);
 	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+		//aes_v8_encrypt(ctx, walk);
 		kernel_neon_begin();
-		aes_v8_set_encrypt_key((const unsigned char *)ctx->key_enc,
-					ctx->key_length * 8, &key);
 		aes_v8_cbc_encrypt(walk->src.virt.addr, walk->dst.virt.addr,
 				   walk->nbytes, &key, walk->iv, 1);
 		kernel_neon_end();
@@ -287,6 +320,30 @@ static int __maybe_unused cbc_encrypt(struct skcipher_request *req)
 static int cbc_decrypt_walk(struct skcipher_request *req,
 			    struct skcipher_walk *walk)
 {
+#ifdef AES_PERL
+	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
+	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
+	int err = 0, rounds = 6 + ctx->key_length / 4;
+	unsigned int blocks;
+	AES_KEY key;
+
+	kernel_neon_begin();
+	pr_warn("enc:0x%x, dec:0x%x\n",
+		*(unsigned int *)ctx->key_enc,
+		*(unsigned int *)ctx->key_dec);
+	aes_v8_set_decrypt_key((const unsigned char *)ctx->key_enc,
+				ctx->key_length * 8, &key);
+	kernel_neon_end();
+	while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+		//aes_v8_decrypt(ctx, walk);
+		kernel_neon_begin();
+		aes_v8_cbc_encrypt(walk->src.virt.addr, walk->dst.virt.addr,
+				   walk->nbytes, &key, walk->iv, 0);
+		kernel_neon_end();
+		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+	}
+	return err;
+#else
 	struct crypto_skcipher *tfm = crypto_skcipher_reqtfm(req);
 	struct crypto_aes_ctx *ctx = crypto_skcipher_ctx(tfm);
 	int err = 0, rounds = 6 + ctx->key_length / 4;
@@ -300,6 +357,7 @@ static int cbc_decrypt_walk(struct skcipher_request *req,
 		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
 	}
 	return err;
+#endif
 }
 
 static int __maybe_unused cbc_decrypt(struct skcipher_request *req)

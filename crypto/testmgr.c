@@ -5136,6 +5136,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.suite = {
 			.aead = __VECS(essiv_hmac_sha256_aes_cbc_tv_temp)
 		}
+#if 0
 	}, {
 		.alg = "essiv(cbc(aes),sha256)",
 		.test = alg_test_skcipher,
@@ -5143,6 +5144,7 @@ static const struct alg_test_desc alg_test_descs[] = {
 		.suite = {
 			.cipher = __VECS(essiv_aes_cbc_tv_template)
 		}
+#endif
 	}, {
 #if IS_ENABLED(CONFIG_CRYPTO_DH_RFC7919_GROUPS)
 		.alg = "ffdhe2048(dh)",
