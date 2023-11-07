@@ -327,6 +327,7 @@ static int cbc_decrypt_walk(struct skcipher_request *req,
 	unsigned int blocks;
 	AES_KEY key;
 
+	/*
 	kernel_neon_begin();
 	pr_warn("enc:0x%x, dec:0x%x\n",
 		*(unsigned int *)ctx->key_enc,
@@ -341,6 +342,46 @@ static int cbc_decrypt_walk(struct skcipher_request *req,
 				   walk->nbytes, &key, walk->iv, 0);
 		kernel_neon_end();
 		err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+	}
+	*/
+	{
+		void *mem = kzalloc(PAGE_SIZE >> 1, GFP_KERNEL);
+		int compare = 1;
+
+		if (!mem) {
+			pr_warn("%s: fail to allocate memory. Use original methods!\n");
+			compare = 0;
+		}
+
+		if (compare) {
+			kernel_neon_begin();
+			aes_v8_set_decrypt_key((const unsigned char *)ctx->key_enc,
+						ctx->key_length * 8, &key);
+			kernel_neon_end();
+		}
+
+		while ((blocks = (walk->nbytes / AES_BLOCK_SIZE))) {
+			kernel_neon_begin();
+			if (compare) {
+				aes_v8_cbc_encrypt(walk->src.virt.addr, mem,
+						walk->nbytes, &key, walk->iv, 0);
+			}
+			aes_cbc_decrypt(walk->dst.virt.addr, walk->src.virt.addr,
+					ctx->key_dec, rounds, blocks, walk->iv);
+			kernel_neon_end();
+			if (compare) {
+				// compare the result & dump the difference
+				print_hex_dump(KERN_WARNING, "aesv8 ptext: ", DUMP_PREFIX_OFFSET,
+						8, 1, walk->src.virt.addr, walk->nbytes, true);
+				print_hex_dump(KERN_WARNING, "aesv8 ctext: ", DUMP_PREFIX_OFFSET,
+						8, 1, mem, walk->nbytes, true);
+				print_hex_dump(KERN_WARNING, "aescbc ptext: ", DUMP_PREFIX_OFFSET,
+						8, 1, walk->src.virt.addr, walk->nbytes, true);
+				print_hex_dump(KERN_WARNING, "aescbc ctext: ", DUMP_PREFIX_OFFSET,
+						8, 1, walk->dst.virt.addr, walk->nbytes, true);
+			}
+			err = skcipher_walk_done(walk, walk->nbytes % AES_BLOCK_SIZE);
+		}
 	}
 	return err;
 #else
