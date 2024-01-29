@@ -128,6 +128,7 @@ static const char * const attach_type_name[] = {
 	[BPF_TRACE_UPROBE_MULTI]	= "trace_uprobe_multi",
 	[BPF_NETKIT_PRIMARY]		= "netkit_primary",
 	[BPF_NETKIT_PEER]		= "netkit_peer",
+	[BPF_CRYPTO_SHASH]		= "crypto_shash"
 };
 
 static const char * const link_type_name[] = {
@@ -217,6 +218,7 @@ static const char * const prog_type_name[] = {
 	[BPF_PROG_TYPE_SK_LOOKUP]		= "sk_lookup",
 	[BPF_PROG_TYPE_SYSCALL]			= "syscall",
 	[BPF_PROG_TYPE_NETFILTER]		= "netfilter",
+	[BPF_PROG_TYPE_CRYPTO_SHASH]		= "crypto_shash"
 };
 
 static int __base_pr(enum libbpf_print_level level, const char *format,
@@ -9411,6 +9413,7 @@ static const struct bpf_sec_def section_defs[] = {
 	SEC_DEF("struct_ops.s+",	STRUCT_OPS, 0, SEC_SLEEPABLE),
 	SEC_DEF("sk_lookup",		SK_LOOKUP, BPF_SK_LOOKUP, SEC_ATTACHABLE),
 	SEC_DEF("netfilter",		NETFILTER, BPF_NETFILTER, SEC_NONE),
+	SEC_DEF("crypto/shash",		CRYPTO_SHASH, BPF_CRYPTO_SHASH, SEC_ATTACHABLE_OPT),
 };
 
 int libbpf_register_prog_handler(const char *sec,

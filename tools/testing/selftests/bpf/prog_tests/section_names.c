@@ -203,6 +203,11 @@ static struct sec_name_test tests[] = {
 		{0, BPF_PROG_TYPE_CGROUP_SOCK_ADDR, BPF_CGROUP_UNIX_GETSOCKNAME},
 		{0, BPF_CGROUP_UNIX_GETSOCKNAME},
 	},
+	{
+		"crypto/shash",
+		{0, BPF_PROG_TYPE_CRYPTO_SHASH, BPF_CRYPTO_SHASH},
+		{0, BPF_CRYPTO_SHASH},
+	},
 };
 
 static void test_prog_type_by_name(const struct sec_name_test *test)
