@@ -3096,6 +3096,14 @@ extern const struct bpf_func_proto bpf_get_retval_proto;
 extern const struct bpf_func_proto bpf_user_ringbuf_drain_proto;
 extern const struct bpf_func_proto bpf_cgrp_storage_get_proto;
 extern const struct bpf_func_proto bpf_cgrp_storage_delete_proto;
+extern const struct bpf_func_proto bpf_crypto_alloc_shash_proto;
+extern const struct bpf_func_proto bpf_crypto_free_shash_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_init_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_update_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_final_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_digest_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_digestsize_proto;
+extern const struct bpf_func_proto bpf_crypto_shash_setkey_proto;
 
 const struct bpf_func_proto *tracing_prog_func_proto(
   enum bpf_func_id func_id, const struct bpf_prog *prog);

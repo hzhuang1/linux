@@ -995,6 +995,7 @@ enum bpf_prog_type {
 	BPF_PROG_TYPE_SK_LOOKUP,
 	BPF_PROG_TYPE_SYSCALL, /* a program that can execute syscalls */
 	BPF_PROG_TYPE_NETFILTER,
+	BPF_PROG_TYPE_CRYPTO_SHASH,
 };
 
 enum bpf_attach_type {
@@ -1054,6 +1055,7 @@ enum bpf_attach_type {
 	BPF_CGROUP_UNIX_GETSOCKNAME,
 	BPF_NETKIT_PRIMARY,
 	BPF_NETKIT_PEER,
+	BPF_CRYPTO_SHASH,
 	__MAX_BPF_ATTACH_TYPE
 };
 
@@ -5679,6 +5681,66 @@ union bpf_attr {
  *		0 on success.
  *
  *		**-ENOENT** if the bpf_local_storage cannot be found.
+ *
+ * u64 bpf_crypto_alloc_shash(const char *alg_name, u32 type, u32 mask)
+ *	Description
+ *		Allocate a cipher handle for a message digest.
+ *	Return
+ *		A pointer is returned on success.
+ *
+ *		PTR_ERR() returns the error code.
+ *
+ * long bpf_crypto_free_shash(u64 tfm)
+ *	Description
+ *		Free th message digest handle.
+ *	Return
+ *		0 on success.
+ *
+ * long bpf_crypto_shash_init(u64 handle)
+ *	Description
+ *		Initialize message digest.
+ *	Return
+ *		0 on success.
+ *
+ *		Negative value if error occurs.
+ *
+ * long bpf_crypto_shash_update(u64 handle, const void *data, u32 len)
+ *	Description
+ *		Add data to message digest for processing.
+ *	Return
+ *		0 on success.
+ *
+ *		Negative value if error occurs.
+ *
+ * long bpf_crypto_shash_final(u64 handle, u8 *out)
+ *	Description
+ *		Calculate message digest.
+ *	Return
+ *		0 on success.
+ *
+ *		Negative value if error occurs.
+ *
+ * long bpf_crypto_shash_digest(u64 handle, const void *data, u32 len, u8 *out)
+ *	Description
+ *		Calculate message digest for buffer.
+ *	Return
+ *		0 on success.
+ *
+ *		Negative value if error occurs.
+ *
+ * long bpf_crypto_shash_digestsize(u64 tfm)
+ *	Description
+ *		Obtain message digest size.
+ *	Return
+ *		Digest size.
+ *
+ * long bpf_crypto_shash_setkey(u64 tfm, const void *key, u32 key_len)
+ *	Description
+ *		Set key for message digest.
+ *	Return
+ *		0 on success.
+ *
+ *		Negative value if error occurs.
  */
 #define ___BPF_FUNC_MAPPER(FN, ctx...)			\
 	FN(unspec, 0, ##ctx)				\
@@ -5893,6 +5955,14 @@ union bpf_attr {
 	FN(user_ringbuf_drain, 209, ##ctx)		\
 	FN(cgrp_storage_get, 210, ##ctx)		\
 	FN(cgrp_storage_delete, 211, ##ctx)		\
+	FN(crypto_alloc_shash, 212, ##ctx)		\
+	FN(crypto_free_shash, 213, ##ctx)		\
+	FN(crypto_shash_init, 214, ##ctx)		\
+	FN(crypto_shash_update, 215, ##ctx)		\
+	FN(crypto_shash_final, 216, ##ctx)		\
+	FN(crypto_shash_digest, 217, ##ctx)		\
+	FN(crypto_shash_digestsize, 218, ##ctx)		\
+	FN(crypto_shash_setkey, 219, ##ctx)		\
 	/* */
 
 /* backwards-compatibility macros for users of __BPF_FUNC_MAPPER that don't

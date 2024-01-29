@@ -242,6 +242,15 @@ config CRYPTO_SIMD
 config CRYPTO_ENGINE
 	tristate
 
+config CRYPTO_BPF
+	bool "Support for eBPF programs attached to cryptography"
+	depends on BPF_SYSCALL
+	help
+	  Allow attaching eBPF programs to a cryptographic algorithm
+          using the bpf(2) syscall command BPF_PROG_ATTACH.
+
+          These eBPF programs can call cryptographic algorithm directly.
+
 endmenu
 
 menu "Public-key cryptography"

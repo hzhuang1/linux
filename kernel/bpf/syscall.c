@@ -3,6 +3,7 @@
  */
 #include <linux/bpf.h>
 #include <linux/bpf-cgroup.h>
+#include <linux/bpf_crypto.h>
 #include <linux/bpf_trace.h>
 #include <linux/bpf_lirc.h>
 #include <linux/bpf_verifier.h>
@@ -3801,6 +3802,8 @@ attach_type_to_prog_type(enum bpf_attach_type attach_type)
 	case BPF_NETKIT_PRIMARY:
 	case BPF_NETKIT_PEER:
 		return BPF_PROG_TYPE_SCHED_CLS;
+	case BPF_CRYPTO_SHASH:
+		return BPF_PROG_TYPE_CRYPTO_SHASH;
 	default:
 		return BPF_PROG_TYPE_UNSPEC;
 	}
@@ -3942,6 +3945,9 @@ static int bpf_prog_attach(const union bpf_attr *attr)
 		else
 			ret = netkit_prog_attach(attr, prog);
 		break;
+	case BPF_PROG_TYPE_CRYPTO_SHASH:
+		ret = crypto_prog_attach(attr, prog);
+		break;
 	default:
 		ret = -EINVAL;
 	}
@@ -4006,6 +4012,9 @@ static int bpf_prog_detach(const union bpf_attr *attr)
 			ret = tcx_prog_detach(attr, prog);
 		else
 			ret = netkit_prog_detach(attr, prog);
+		break;
+	case BPF_PROG_TYPE_CRYPTO_SHASH:
+		ret = crypto_prog_detach(attr);
 		break;
 	default:
 		ret = -EINVAL;
@@ -4075,6 +4084,8 @@ static int bpf_prog_query(const union bpf_attr *attr,
 	case BPF_NETKIT_PRIMARY:
 	case BPF_NETKIT_PEER:
 		return netkit_prog_query(attr, uattr);
+	case BPF_CRYPTO_SHASH:
+		return crypto_prog_query(attr, uattr);
 	default:
 		return -EINVAL;
 	}
