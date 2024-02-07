@@ -28,13 +28,11 @@
 // 5. We can read keycode from same /dev/lirc device
 
 #include <linux/bpf.h>
-#include <linux/input.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <poll.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
@@ -46,10 +44,11 @@
 
 #include "testing_helpers.h"
 
+#if 0
 int main(int argc, char **argv)
 {
 	struct bpf_object *obj;
-	int ret, lircfd, progfd/*, inputfd*/;
+	int ret, /*lircfd, */progfd/*, inputfd*/;
 	/*
 	int testir1 = 0x1dead;
 	int testir2 = 0x20101;
@@ -64,120 +63,179 @@ int main(int argc, char **argv)
 	}
 	printf("hello!\n");
 
+	bpf_object__close(obj);
+	/*
 	lircfd = 0;
 	ret = bpf_prog_detach2(progfd, lircfd, BPF_CRYPTO_SHASH);
 	if (ret != -1 || errno != ENOENT) {
 		printf("bpf_prog_detach2 not attached should fail: %m\n");
 		return 1;
 	}
-#if 0
-	lircfd = open(argv[1], O_RDWR | O_NONBLOCK);
-	if (lircfd == -1) {
-		printf("failed to open lirc device %s: %m\n", argv[1]);
-		return 1;
-	}
-
-	/* Let's try detach it before it was ever attached */
-	ret = bpf_prog_detach2(progfd, lircfd, BPF_LIRC_MODE2);
-	if (ret != -1 || errno != ENOENT) {
-		printf("bpf_prog_detach2 not attached should fail: %m\n");
-		return 1;
-	}
-
-	inputfd = open(argv[2], O_RDONLY | O_NONBLOCK);
-	if (inputfd == -1) {
-		printf("failed to open input device %s: %m\n", argv[1]);
-		return 1;
-	}
-
-	prog_cnt = 10;
-	ret = bpf_prog_query(lircfd, BPF_LIRC_MODE2, 0, prog_flags, prog_ids,
-			     &prog_cnt);
-	if (ret) {
-		printf("Failed to query bpf programs on lirc device: %m\n");
-		return 1;
-	}
-
-	if (prog_cnt != 0) {
-		printf("Expected nothing to be attached\n");
-		return 1;
-	}
-
-	ret = bpf_prog_attach(progfd, lircfd, BPF_LIRC_MODE2, 0);
-	if (ret) {
-		printf("Failed to attach bpf to lirc device: %m\n");
-		return 1;
-	}
-
-	/* Write raw IR */
-	ret = write(lircfd, &testir1, sizeof(testir1));
-	if (ret != sizeof(testir1)) {
-		printf("Failed to send test IR message: %m\n");
-		return 1;
-	}
-
-	struct pollfd pfd = { .fd = inputfd, .events = POLLIN };
-	struct input_event event;
-
-	for (;;) {
-		poll(&pfd, 1, 100);
-
-		/* Read decoded IR */
-		ret = read(inputfd, &event, sizeof(event));
-		if (ret != sizeof(event)) {
-			printf("Failed to read decoded IR: %m\n");
-			return 1;
-		}
-
-		if (event.type == EV_MSC && event.code == MSC_SCAN &&
-		    event.value == 0xdead) {
-			break;
-		}
-	}
-
-	/* Write raw IR */
-	ret = write(lircfd, &testir2, sizeof(testir2));
-	if (ret != sizeof(testir2)) {
-		printf("Failed to send test IR message: %m\n");
-		return 1;
-	}
-
-	for (;;) {
-		poll(&pfd, 1, 100);
-
-		/* Read decoded IR */
-		ret = read(inputfd, &event, sizeof(event));
-		if (ret != sizeof(event)) {
-			printf("Failed to read decoded IR: %m\n");
-			return 1;
-		}
-
-		if (event.type == EV_REL && event.code == REL_Y &&
-		    event.value == 1 ) {
-			break;
-		}
-	}
-
-	prog_cnt = 10;
-	ret = bpf_prog_query(lircfd, BPF_LIRC_MODE2, 0, prog_flags, prog_ids,
-			     &prog_cnt);
-	if (ret) {
-		printf("Failed to query bpf programs on lirc device: %m\n");
-		return 1;
-	}
-
-	if (prog_cnt != 1) {
-		printf("Expected one program to be attached\n");
-		return 1;
-	}
-
-	/* Let's try detaching it now it is actually attached */
-	ret = bpf_prog_detach2(progfd, lircfd, BPF_LIRC_MODE2);
-	if (ret) {
-		printf("bpf_prog_detach2: returned %m\n");
-		return 1;
-	}
-#endif
+	*/
 
 	return 0;
 }
+#endif
+
+#if 0
+int main(int argc, char **argv)
+{
+	struct bpf_object *obj = NULL;
+	struct bpf_program *prog;
+	char filename[256] = "test_crypto_kern.bpf.o";
+	int ret, map_fd;
+	int key, value[10];
+
+	printf("hello!\n");
+	obj = bpf_object__open_file(filename, NULL);
+	ret = libbpf_get_error(obj);
+	if (ret) {
+		fprintf(stderr, "ERROR: opening BPF object file failed\n");
+		obj = NULL;
+		goto out;
+	}
+
+	prog = bpf_object__find_program_by_name(obj, "bpf_md5");
+	if (!prog) {
+		fprintf(stderr, "ERROR: find a prog in obj file failed\n");
+		goto out_prog;
+	}
+
+	/* load BPF program */
+	ret = bpf_object__load(obj);
+	if (ret) {
+		fprintf(stderr, "ERROR: loading BPF object file failed\n");
+		fprintf(stderr, "ret:%d\n", ret);
+		goto out_prog;
+	}
+	map_fd = bpf_map_create(BPF_MAP_TYPE_ARRAY, "array_map", sizeof(int),
+				sizeof(__s64), 10, NULL);
+	if (map_fd == -1) {
+		fprintf(stderr, "ERROR: create map failed (%s)\n",
+			strerror(errno));
+		goto out_prog;
+	}
+	ret = bpf_map_lookup_elem(map_fd, &key, value);
+	for (int i = 0; i < 10; i++) {
+		printf("[%d]: 0x%x\n", i, value[i]);
+	}
+	printf("hello end!\n");
+	close(map_fd);
+out_prog:
+	bpf_object__close(obj);
+out:
+	return ret;
+}
+#endif
+
+#if 1
+#include "test_crypto_kern.skel.h"
+
+typedef char stringkey[64];
+static int libbpf_print_fn(enum libbpf_print_level level, const char *format,
+			   va_list args)
+{
+	return vfprintf(stderr, format, args);
+}
+
+int main(int argc, char **argv)
+{
+	struct test_crypto_kern *skel;
+	int err;
+
+	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
+	libbpf_set_print(libbpf_print_fn);
+
+	skel = test_crypto_kern__open();
+	if (!skel) {
+		fprintf(stderr, "Failed to open BPF skeleton\n");
+		return 1;
+	}
+
+	err = test_crypto_kern__load(skel);
+	if (err) {
+		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
+		goto cleanup;
+	}
+
+	stringkey key = "execve_counter";
+	__u64 v = 0;
+	err = bpf_map__update_elem(skel->maps.execve_counter, &key, sizeof(key), &v, sizeof(v), BPF_ANY);
+	if (err != 0) {
+		fprintf(stderr, "Failed to init the counter, %d\n", err);
+		goto cleanup;
+	}
+
+	err = test_crypto_kern__attach(skel);
+	if (err) {
+		fprintf(stderr, "Failed to attach BPF skeleton\n");
+		goto cleanup;
+	}
+
+	for (;;) {
+		err = bpf_map__lookup_elem(skel->maps.execve_counter, &key, sizeof(key), &v, sizeof(v), BPF_ANY);
+		if (err != 0) {
+			fprintf(stderr, "Lookup key from map error: %d\n", err);
+			goto cleanup;
+		} else {
+			printf("execve_counter is %llu\n", v);
+		}
+		sleep(5);
+	}
+cleanup:
+	test_crypto_kern__destroy(skel);
+	return -err;
+}
+/*
+int main(int argc, char **argv)
+{
+	struct test_crypto_kern *skel;
+	int ret, key, value;
+
+	libbpf_set_print(libbpf_print_fn);
+
+	skel = test_crypto_kern__open();
+	if (!skel) {
+		fprintf(stderr, "Failed to open BPF skeleton\n");
+		return -EFAULT;
+	}
+
+	ret = test_crypto_kern__load(skel);
+	if (ret) {
+		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
+		goto out;
+	}
+
+	ret = test_crypto_kern__attach(skel);
+	if (ret) {
+		fprintf(stderr, "Failed to attach BPF skeleton\n");
+		goto out;
+	}
+	key = 0;
+	value = 0xa5a5;
+	ret = bpf_map__update_elem(skel->maps.hash_map, &key, sizeof(key),
+				   &value, sizeof(value), BPF_ANY);
+	if (ret) {
+		fprintf(stderr, "Failed to init value\n");
+		goto out;
+	}
+	for (;;) {
+		ret = bpf_map__lookup_elem(skel->maps.hash_map, &key, sizeof(key),
+					   &value, sizeof(value), BPF_ANY);
+		printf("key:%d, value:%d\n", key, value);
+		if (value == 0x55)
+			break;
+		sleep(1);
+	}
+	key = 1;
+	ret = bpf_map__lookup_elem(skel->maps.hash_map, &key, sizeof(key),
+				   &value, sizeof(value), BPF_ANY);
+	printf("key:%d, value:%d\n", key, value);
+	test_crypto_kern__destroy(skel);
+	return 0;
+out:
+	test_crypto_kern__destroy(skel);
+	return ret;
+}
+*/
+#endif
