@@ -17,7 +17,7 @@ const struct bpf_func_proto bpf_crypto_alloc_shash_proto = {
 	.func		= bpf_crypto_alloc_shash,
 	.gpl_only	= false,
 	.ret_type	= RET_INTEGER,
-	.arg1_type	= ARG_PTR_TO_MEM | MEM_RDONLY,
+	.arg1_type	= ARG_PTR_TO_CONST_STR | MEM_RDONLY,
 	.arg2_type	= ARG_ANYTHING,
 	.arg3_type	= ARG_ANYTHING,
 };
@@ -137,7 +137,7 @@ const struct bpf_func_proto bpf_crypto_shash_setkey_proto = {
 	.arg3_type	= ARG_ANYTHING,
 };
 
-static const struct bpf_func_proto *
+const struct bpf_func_proto *
 crypto_shash_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 {
 	switch (func_id) {
@@ -157,6 +157,22 @@ crypto_shash_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 		return &bpf_crypto_shash_digestsize_proto;
 	case BPF_FUNC_crypto_shash_setkey:
 		return &bpf_crypto_shash_setkey_proto;
+	case BPF_FUNC_map_lookup_elem:
+		return &bpf_map_lookup_elem_proto;
+	case BPF_FUNC_map_update_elem:
+		return &bpf_map_update_elem_proto;
+	case BPF_FUNC_map_delete_elem:
+		return &bpf_map_delete_elem_proto;
+	case BPF_FUNC_map_push_elem:
+		return &bpf_map_push_elem_proto;
+	case BPF_FUNC_map_pop_elem:
+		return &bpf_map_pop_elem_proto;
+	case BPF_FUNC_map_peek_elem:
+		return &bpf_map_peek_elem_proto;
+	case BPF_FUNC_trace_printk:
+		if (perfmon_capable())
+			return bpf_get_trace_printk_proto();
+		fallthrough;
 	default:
 		return NULL;
 	}
