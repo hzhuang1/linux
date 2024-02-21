@@ -5682,7 +5682,7 @@ union bpf_attr {
  *
  *		**-ENOENT** if the bpf_local_storage cannot be found.
  *
- * u64 bpf_crypto_alloc_shash(const char *alg_name, u32 type, u32 mask)
+ * u64 bpf_crypto_alloc_shash(const char *alg_name, u32 type, u32 mask, u64 *handle)
  *	Description
  *		Allocate a cipher handle for a message digest.
  *	Return
