@@ -8,9 +8,36 @@
 const struct bpf_prog_ops crypto_shash_prog_ops = {
 };
 
-BPF_CALL_3(bpf_crypto_alloc_shash, const char *, alg_name, u32, type, u32, mask)
+BPF_CALL_4(bpf_crypto_alloc_shash, const char *, alg_name, u32, type,
+	   u32, mask, u64 *, handle)
 {
-	return (u64)crypto_alloc_shash(alg_name, type, mask);
+	struct crypto_shash *shash = NULL;
+	struct shash_desc *sdesc = NULL;
+	int size;
+	u64 ret;
+
+	if (!handle)
+		return -EINVAL;
+	shash = crypto_alloc_shash(alg_name, type, mask);
+	if (IS_ERR(shash)) {
+		ret = PTR_ERR(shash);
+		goto out;
+	}
+	size = sizeof(struct shash_desc) + crypto_shash_descsize(shash);
+	sdesc = kzalloc(size, GFP_KERNEL);
+	if (!sdesc) {
+		goto out_sdesc;
+	}
+	sdesc->tfm = shash;
+	ret = crypto_shash_init(sdesc);
+	pr_err("#%s, %d, alg_name:%s, type:%d, mask:%d, ret:0x%x\n",
+		__func__, __LINE__, alg_name, type, mask, ret);
+	*handle = (u64)sdesc;
+	return ret;
+out_sdesc:
+	crypto_free_shash(shash);
+out:
+	return ret;
 }
 
 const struct bpf_func_proto bpf_crypto_alloc_shash_proto = {
@@ -20,13 +47,20 @@ const struct bpf_func_proto bpf_crypto_alloc_shash_proto = {
 	.arg1_type	= ARG_PTR_TO_CONST_STR | MEM_RDONLY,
 	.arg2_type	= ARG_ANYTHING,
 	.arg3_type	= ARG_ANYTHING,
+	.arg4_type	= ARG_PTR_TO_LONG,
 };
 
-BPF_CALL_1(bpf_crypto_free_shash, u64, tfm)
+BPF_CALL_1(bpf_crypto_free_shash, u64, handle)
 {
-	struct crypto_shash *shash = (struct crypto_shash *)tfm;
+	struct shash_desc *sdesc;
+	struct crypto_shash *shash;
 
+	if (handle == 0)
+		return -EINVAL;
+	sdesc = (struct shash_desc *)handle;
+	shash = sdesc->tfm;
 	crypto_free_shash(shash);
+	kfree(sdesc);
 	return 0;
 }
 
@@ -141,6 +175,7 @@ const struct bpf_func_proto *
 crypto_shash_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 {
 	switch (func_id) {
+	/*
 	case BPF_FUNC_crypto_alloc_shash:
 		return &bpf_crypto_alloc_shash_proto;
 	case BPF_FUNC_crypto_free_shash:
@@ -170,16 +205,30 @@ crypto_shash_func_proto(enum bpf_func_id func_id, const struct bpf_prog *prog)
 	case BPF_FUNC_map_peek_elem:
 		return &bpf_map_peek_elem_proto;
 	case BPF_FUNC_trace_printk:
-		if (perfmon_capable())
-			return bpf_get_trace_printk_proto();
-		fallthrough;
+		return bpf_get_trace_printk_proto();
+	case BPF_FUNC_trace_vprintk:
+		return bpf_get_trace_vprintk_proto();
+	*/
 	default:
-		return NULL;
+		return bpf_base_func_proto(func_id);
 	}
+}
+
+static bool crypto_shash_is_valid_access(int off, int size,
+					 enum bpf_access_type type,
+					 const struct bpf_prog *prog,
+					 struct bpf_insn_access_aux *info)
+{
+	if (off < 0 || off >= U16_MAX)
+		return false;
+	if (off % size != 0)
+		return false;
+	return true;
 }
 
 const struct bpf_verifier_ops crypto_shash_verifier_ops = {
 	.get_func_proto  = crypto_shash_func_proto,
+	.is_valid_access = crypto_shash_is_valid_access,
 };
 
 int crypto_prog_attach(const union bpf_attr *attr, struct bpf_prog *prog)
@@ -189,6 +238,7 @@ int crypto_prog_attach(const union bpf_attr *attr, struct bpf_prog *prog)
 	if (attr->attach_flags)
 		return -EINVAL;
 
+	pr_err("#%s, %d\n", __func__, __LINE__);
 	return ret;
 }
 

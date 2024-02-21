@@ -1494,6 +1494,7 @@ static int bpf_dynptr_check_off_len(const struct bpf_dynptr_kern *ptr, u32 offse
 {
 	u32 size = __bpf_dynptr_size(ptr);
 
+	pr_err("#%s, len:%d, size:%d, offset:%d\n", __func__, len, size, offset);
 	if (len > size || offset > size - len)
 		return -E2BIG;
 
@@ -1541,6 +1542,7 @@ BPF_CALL_5(bpf_dynptr_read, void *, dst, u32, len, const struct bpf_dynptr_kern 
 	enum bpf_dynptr_type type;
 	int err;
 
+	pr_err("#%s, data:0x%llx\n", __func__, (__u64)src->data);
 	if (!src->data || flags)
 		return -EINVAL;
 
@@ -1783,6 +1785,24 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_get_current_cgroup_id_proto;
 	case BPF_FUNC_get_current_ancestor_cgroup_id:
 		return &bpf_get_current_ancestor_cgroup_id_proto;
+#endif
+#ifdef CONFIG_CRYPTO
+	case BPF_FUNC_crypto_alloc_shash:
+		return &bpf_crypto_alloc_shash_proto;
+	case BPF_FUNC_crypto_free_shash:
+		return &bpf_crypto_free_shash_proto;
+	case BPF_FUNC_crypto_shash_init:
+		return &bpf_crypto_shash_init_proto;
+	case BPF_FUNC_crypto_shash_update:
+		return &bpf_crypto_shash_update_proto;
+	case BPF_FUNC_crypto_shash_final:
+		return &bpf_crypto_shash_final_proto;
+	case BPF_FUNC_crypto_shash_digest:
+		return &bpf_crypto_shash_digest_proto;
+	case BPF_FUNC_crypto_shash_digestsize:
+		return &bpf_crypto_shash_digestsize_proto;
+	case BPF_FUNC_crypto_shash_setkey:
+		return &bpf_crypto_shash_setkey_proto;
 #endif
 	default:
 		break;
