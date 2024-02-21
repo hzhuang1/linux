@@ -19,36 +19,110 @@ struct {
 	__uint(max_entries, 2);
 } hash_map SEC(".maps");
 
+struct {
+	__uint(type, BPF_MAP_TYPE_USER_RINGBUF);
+	__uint(max_entries, 256 * 1024);
+} user_rb SEC(".maps");
+
+struct {
+	__uint(type, BPF_MAP_TYPE_RINGBUF);
+	__uint(max_entries, 4096);
+} kern_rb SEC(".maps");
+
+//static long do_md5(const struct bpf_dynptr *dynptr, void *ctx)
+static long do_md5(__u64 arg1, __u64 arg2, __u64 arg3, __u64 arg4, __u64 arg5)
+{
+	struct bpf_dynptr *dynptr = (struct bpf_dynptr *)arg1;
+	__u64 tmp;
+	int ret;
+	//void *p = NULL;
+
+	bpf_printk("entering do_md5()\n");
+	bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
+	ret = bpf_dynptr_read(&tmp, sizeof(__u64), dynptr, 0, 0);
+	bpf_printk("ret:%d\n", ret);
+	//bpf_printk("arg1:0x%llx\n", arg1);
+	//bpf_printk("*dynptr:0x%llx\n", *(__u64 *)dynptr);
+	//bpf_printk("entering do_md5(), arg1:%llx, arg2:%llx, arg3:%llx\n", arg1, arg2, arg3);
+	//p = bpf_dynptr_data(dynptr, 0, 5);
+	//p = dynptr;
+	//p = p + 8;
+	//bpf_printk("p:0x%llx\n", (__u64)p);
+	//bpf_printk("*p:0x%llx\n", *(__u64 *)p);
+	return 0;
+}
+
+//SEC("fentry/__arm64_sys_getpgid")
+SEC("tracepoint/syscalls/sys_enter_getpgid")
+int handle_user_ringbuf()
+{
+	long status = 0;
+	long cons_pos, prod_pos, avail_data, rb_size;
+	//int ret, key;
+	//int *value;
+	char fmt3[] = "rb_size:%d, avail_data:%d\n";
+	char fmt4[] = "cons_pos:%d, prod_pos:%d\n";
+
+	bpf_printk("entering handle_user_ringbuf()\n");
+	cons_pos = bpf_ringbuf_query(&kern_rb, BPF_RB_CONS_POS);
+	prod_pos = bpf_ringbuf_query(&kern_rb, BPF_RB_PROD_POS);
+	avail_data = bpf_ringbuf_query(&kern_rb, BPF_RB_AVAIL_DATA);
+	rb_size = bpf_ringbuf_query(&kern_rb, BPF_RB_RING_SIZE);
+	bpf_trace_printk(fmt3, sizeof(fmt3), rb_size, avail_data);
+	bpf_trace_printk(fmt4, sizeof(fmt4), cons_pos, prod_pos);
+
+	status = bpf_user_ringbuf_drain(&user_rb, do_md5, NULL, 0);
+	bpf_printk("status:%ld\n", status);
+	if (status < 0) {
+		bpf_printk("drain user ringbuf returned %ld\n", status);
+		return -1;
+	}
+	return 0;
+}
+
 //SEC("perf_event")
-/*
-SEC("crypto/shash")
+//SEC("crypto/shash")
+//SEC("tracepoint/raw_syscalls/sys_enter")
+//SEC("sys_getpgid")
 int bpf_md5()
 {
-	//__u64 tfm = 0;
-	int tfm = 0;
-	int ret, key;
-	int *value;
-	char fmt[] = "tfm:0x%x\n";
-	char fmt2[] = "hello world\n";
+	__u64 handle;
+	int ret;
+	long cons_pos, prod_pos, avail_data, rb_size;
+	//int ret, key;
+	//int *value;
+	char fmt[] = "tfm:0x%llx, ret:%x\n";
+	char fmt3[] = "rb_size:%d, avail_data:%d\n";
+	char fmt4[] = "cons_pos:%d, prod_pos:%d\n";
 
-	key = 0;
+	cons_pos = bpf_ringbuf_query(&kern_rb, BPF_RB_CONS_POS);
+	prod_pos = bpf_ringbuf_query(&kern_rb, BPF_RB_PROD_POS);
+	avail_data = bpf_ringbuf_query(&kern_rb, BPF_RB_AVAIL_DATA);
+	rb_size = bpf_ringbuf_query(&kern_rb, BPF_RB_RING_SIZE);
+	bpf_trace_printk(fmt3, sizeof(fmt3), rb_size, avail_data);
+	bpf_trace_printk(fmt4, sizeof(fmt4), cons_pos, prod_pos);
+	//key = 0;
 	//value = 0x55;
 	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
-	tfm = bpf_crypto_alloc_shash("md5", 0, 0);
+	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
+	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
+	bpf_crypto_free_shash(handle);
+	/*
 	ret = bpf_crypto_shash_init(tfm);
+	bpf_trace_printk(fmt3, sizeof(fmt3), ret);
 	value = bpf_map_lookup_elem(&hash_map, &key);
 	if (value) {
 		*value = 0x55;
 	}
 	key = 1;
+	*/
 	//value = ret;
 	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
 	return ret;
-	bpf_trace_printk(fmt, sizeof(fmt), tfm);
-	bpf_trace_printk(fmt2, sizeof(fmt2));
 	//return 0;
 }
-*/
+
+  #if 0
 typedef __u64 u64;
 typedef char stringkey[64];
 
@@ -91,6 +165,7 @@ int handle_modern(void *ctx)
 
 	return res_var;
 }
+  #endif
 
 char _license[] SEC("license") = "GPL";
 #endif

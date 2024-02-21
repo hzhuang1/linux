@@ -27,20 +27,24 @@
 // 4. bpf program should decode IR and report keycode
 // 5. We can read keycode from same /dev/lirc device
 
-#include <linux/bpf.h>
+#include <bpf/bpf.h>
+#include <bpf/libbpf.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <linux/bpf.h>
+//#include <linux/compiler.h>
+#include <linux/ring_buffer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
-#include <fcntl.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "bpf_util.h"
-#include <bpf/bpf.h>
-#include <bpf/libbpf.h>
 
 #include "testing_helpers.h"
 
@@ -138,10 +142,41 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 	return vfprintf(stderr, format, args);
 }
 
+int rb_event(void *ctx, void *data, size_t data_sz)
+{
+	return 0;
+}
+
+size_t load_test_data(void *dst)
+{
+	void *p;
+	char *src = "hello world";
+	size_t size = strlen(src);
+
+	memset(dst, 0, BPF_RINGBUF_HDR_SZ);
+	p = dst + BPF_RINGBUF_HDR_SZ;
+	memcpy(p, src, size);
+	*(__u32 *)dst = size;
+
+	return size;
+}
+
+int drain_md5(void)
+{
+	syscall(__NR_getpgid);
+	return 0;
+}
+
 int main(int argc, char **argv)
 {
 	struct test_crypto_kern *skel;
-	int err;
+	struct user_ring_buffer *rb_data = NULL;
+	struct ring_buffer *rb_digest = NULL;
+	int err, urb_fd, krb_fd;
+	int urb_size = 256 * 1024;
+	__u64 /* *cons_pos_ptr, */*prod_pos_ptr;
+	void *data_ptr;
+	size_t size = 0;
 
 	libbpf_set_strict_mode(LIBBPF_STRICT_ALL);
 	libbpf_set_print(libbpf_print_fn);
@@ -149,20 +184,12 @@ int main(int argc, char **argv)
 	skel = test_crypto_kern__open();
 	if (!skel) {
 		fprintf(stderr, "Failed to open BPF skeleton\n");
-		return 1;
+		return -EFAULT;
 	}
 
 	err = test_crypto_kern__load(skel);
 	if (err) {
 		fprintf(stderr, "Failed to load and verify BPF skeleton\n");
-		goto cleanup;
-	}
-
-	stringkey key = "execve_counter";
-	__u64 v = 0;
-	err = bpf_map__update_elem(skel->maps.execve_counter, &key, sizeof(key), &v, sizeof(v), BPF_ANY);
-	if (err != 0) {
-		fprintf(stderr, "Failed to init the counter, %d\n", err);
 		goto cleanup;
 	}
 
@@ -172,7 +199,86 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
+	/* create ring buffer */
+	urb_fd = bpf_map__fd(skel->maps.user_rb);
+	rb_data = user_ring_buffer__new(urb_fd, NULL);
+	if (!rb_data) {
+		err = -ENOMEM;
+		fprintf(stderr, "Failed to create user ringbuf\n");
+		goto cleanup_urb;
+	}
+	krb_fd = bpf_map__fd(skel->maps.kern_rb);
+	rb_digest = ring_buffer__new(krb_fd, rb_event, NULL, NULL);
+	if (!rb_digest) {
+		err = -ENOMEM;
+		fprintf(stderr, "Failed to create ring buffer\n");
+		goto cleanup_krb;
+	}
+	data_ptr = user_ring_buffer__reserve(rb_data, strlen("start"));
+	fprintf(stderr, "#urb_fd:%d, krb_fd:%d, data_ptr:0x%llx\n", urb_fd, krb_fd, (__u64)data_ptr);
+	memcpy(data_ptr, "start", strlen("start"));
+	user_ring_buffer__submit(rb_data, data_ptr);
+	drain_md5();
+	return 0;
+
+	/* map the producer_pos as RW */
+	/* cons_pos can be mapped R/O, can't add +X with mprotect. */
+	/*
+	cons_pos_ptr = mmap(NULL, urb_size, PROT_READ, MAP_SHARED, urb_fd, 0);
+	if (!cons_pos_ptr) {
+		err = -EINVAL;
+		fprintf(stderr, "Failed to mmap cons_pos_ptr\n");
+		goto cleanup_map;
+	}
+	fprintf(stderr, "#cons_pos_ptr:%p\n", cons_pos_ptr);
+	*/
+	prod_pos_ptr = mmap(NULL, urb_size, PROT_READ | PROT_WRITE,
+			    MAP_SHARED, urb_fd, urb_size);
+	if (!prod_pos_ptr) {
+		err = -EINVAL;
+		fprintf(stderr, "Failed to mmap prod_pos_ptr\n");
+		goto cleanup_map2;
+	}
+	fprintf(stderr, "#prod_pos_ptr:%p\n", prod_pos_ptr);
+	data_ptr = mmap(NULL, urb_size, PROT_WRITE, MAP_SHARED, urb_fd, urb_size);
+	if (!data_ptr) {
+		err = -EINVAL;
+		fprintf(stderr, "Failed to mmap data_ptr\n");
+		goto cleanup_map3;
+	}
+	fprintf(stderr, "data_ptr:0x%lx\n", (long unsigned int)data_ptr);
+
+	size = load_test_data(data_ptr);
+	fprintf(stderr, "size:%ld\n", size);
+
+	/*
+	 * Synchronize with smp_load_acquire() in __bpf_user_ringbuf_peek()
+	 * in the kernel.
+	 */
+	smp_store_release(prod_pos_ptr, size + BPF_RINGBUF_HDR_SZ);
+	drain_md5();
+
+	/* set up ring buffer polling */
+	/*
+	stringkey key = "execve_counter";
+	__u64 v = 0;
+	fprintf(stderr, "#%s, %d\n", __func__, __LINE__);
+	err = bpf_map__update_elem(skel->maps.execve_counter, &key, sizeof(key), &v, sizeof(v), BPF_ANY);
+	if (err != 0) {
+		fprintf(stderr, "Failed to init the counter, %d\n", err);
+		goto cleanup;
+	}
+
+	fprintf(stderr, "#%s, %d\n", __func__, __LINE__);
+	err = test_crypto_kern__attach(skel);
+	if (err) {
+		fprintf(stderr, "Failed to attach BPF skeleton\n");
+		goto cleanup;
+	}
+
+	fprintf(stderr, "#%s, %d\n", __func__, __LINE__);
 	for (;;) {
+		fprintf(stderr, "#%s, %d\n", __func__, __LINE__);
 		err = bpf_map__lookup_elem(skel->maps.execve_counter, &key, sizeof(key), &v, sizeof(v), BPF_ANY);
 		if (err != 0) {
 			fprintf(stderr, "Lookup key from map error: %d\n", err);
@@ -182,9 +288,20 @@ int main(int argc, char **argv)
 		}
 		sleep(5);
 	}
+	*/
+cleanup_map3:
+	munmap(prod_pos_ptr, urb_size);
+cleanup_map2:
+//	munmap(cons_pos_ptr, urb_size);
+//cleanup_map:
+	ring_buffer__free(rb_digest);
+cleanup_krb:
+	user_ring_buffer__free(rb_data);
+cleanup_urb:
+	test_crypto_kern__detach(skel);
 cleanup:
 	test_crypto_kern__destroy(skel);
-	return -err;
+	return err;
 }
 /*
 int main(int argc, char **argv)
