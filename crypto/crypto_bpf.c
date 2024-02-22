@@ -8,13 +8,20 @@
 const struct bpf_prog_ops crypto_shash_prog_ops = {
 };
 
-BPF_CALL_4(bpf_crypto_alloc_shash, const char *, alg_name, u32, type,
-	   u32, mask, u64 *, handle)
+struct shash_digest_size {
+	union {
+		char buf[32];
+	};
+};
+
+BPF_CALL_5(bpf_crypto_alloc_shash, const char *, alg_name, size_t, len,
+	   u32, type, u32, mask, u64 *, handle)
 {
 	struct crypto_shash *shash = NULL;
 	struct shash_desc *sdesc = NULL;
 	int size;
-	u64 ret;
+	//u64 ret;
+	unsigned long ret;
 
 	if (!handle)
 		return -EINVAL;
@@ -32,7 +39,8 @@ BPF_CALL_4(bpf_crypto_alloc_shash, const char *, alg_name, u32, type,
 	ret = crypto_shash_init(sdesc);
 	pr_err("#%s, %d, alg_name:%s, type:%d, mask:%d, ret:0x%x\n",
 		__func__, __LINE__, alg_name, type, mask, ret);
-	*handle = (u64)sdesc;
+	//*handle = (u64)sdesc;
+	*handle = (unsigned long)sdesc;
 	return ret;
 out_sdesc:
 	crypto_free_shash(shash);
@@ -43,11 +51,12 @@ out:
 const struct bpf_func_proto bpf_crypto_alloc_shash_proto = {
 	.func		= bpf_crypto_alloc_shash,
 	.gpl_only	= false,
-	.ret_type	= RET_INTEGER,
-	.arg1_type	= ARG_PTR_TO_CONST_STR | MEM_RDONLY,
-	.arg2_type	= ARG_ANYTHING,
+	.ret_type	= RET_PTR_TO_MEM,
+	.arg1_type	= ARG_PTR_TO_MEM | MEM_RDONLY,
+	.arg2_type	= ARG_CONST_SIZE_OR_ZERO,
 	.arg3_type	= ARG_ANYTHING,
-	.arg4_type	= ARG_PTR_TO_LONG,
+	.arg4_type	= ARG_ANYTHING,
+	.arg5_type	= ARG_PTR_TO_LONG,
 };
 
 BPF_CALL_1(bpf_crypto_free_shash, u64, handle)
@@ -122,8 +131,8 @@ const struct bpf_func_proto bpf_crypto_shash_final_proto = {
 	.arg2_type	= ARG_PTR_TO_MEM,
 };
 
-BPF_CALL_4(bpf_crypto_shash_digest, u64, handle, const u8 *, data,
-	   unsigned int, len, void *, out)
+BPF_CALL_5(bpf_crypto_shash_digest, u64, handle, u8 *, data,
+	   size_t, len, void *, out, size_t, size)
 {
 	struct shash_desc *desc = (struct shash_desc *)handle;
 
@@ -136,8 +145,9 @@ const struct bpf_func_proto bpf_crypto_shash_digest_proto = {
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_ANYTHING,
 	.arg2_type	= ARG_PTR_TO_MEM | MEM_RDONLY,
-	.arg3_type	= ARG_ANYTHING,
+	.arg3_type	= ARG_CONST_SIZE_OR_ZERO,
 	.arg4_type	= ARG_PTR_TO_MEM,
+	.arg5_type	= ARG_CONST_SIZE_OR_ZERO,
 };
 
 BPF_CALL_1(bpf_crypto_shash_digestsize, u64, tfm)

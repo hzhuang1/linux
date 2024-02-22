@@ -5682,7 +5682,7 @@ union bpf_attr {
  *
  *		**-ENOENT** if the bpf_local_storage cannot be found.
  *
- * u64 bpf_crypto_alloc_shash(const char *alg_name, u32 type, u32 mask, u64 *handle)
+ * long bpf_crypto_alloc_shash(const char *alg_name, size_t len, u32 type, u32 mask, u64 *handle)
  *	Description
  *		Allocate a cipher handle for a message digest.
  *	Return
@@ -5720,7 +5720,7 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_digest(u64 handle, const void *data, u32 len, u8 *out)
+ * long bpf_crypto_shash_digest(u64 handle, const void *data, size_t data_sz, void *out, size_t out_sz)
  *	Description
  *		Calculate message digest for buffer.
  *	Return
