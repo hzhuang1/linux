@@ -29,18 +29,63 @@ struct {
 	__uint(max_entries, 4096);
 } kern_rb SEC(".maps");
 
+static int dump_md5_digest(void *digest, size_t digest_sz)
+{
+	int i, offset;
+	char out[64] = {};
+	__u64 tmp;
+	unsigned char c;
+	for (i = 0, offset = 0; i < digest_sz; i++) {
+		if (i % 8 == 0)
+			tmp = *(__u64 *)(digest + i);
+		c = (tmp & 0xf0) >> 4;
+		if ((c >= 0) && (c <= 9)) {
+			out[offset++] = 0x30 + c;
+		} else if ((c >= 0xa) && (c <= 0xf)) {
+			out[offset++] = 0x61 + c - 10;
+		} else {
+			bpf_printk("wc[%d]:%x, whole value:0x%llx\n", i, c, *(__u64 *)digest);
+		}
+		c = tmp & 0x0f;
+		if ((c >= 0) && (c <= 9)) {
+			out[offset++] = 0x30 + c;
+		} else if ((c >= 0xa) && (c <= 0xf)) {
+			out[offset++] = 0x61 + c - 10;
+		} else {
+			bpf_printk("wc[%d]:%x, whole value:0x%llx\n", i, c, *(__u64 *)digest);
+		}
+		tmp = tmp >> 8;
+		if (i < digest_sz - 1)
+			out[offset++] = '-';
+	}
+	out[offset] = '\0';
+	bpf_printk("digest:%s\n", out);
+	return 0;
+}
+
 //static long do_md5(const struct bpf_dynptr *dynptr, void *ctx)
 static long do_md5(__u64 arg1, __u64 arg2, __u64 arg3, __u64 arg4, __u64 arg5)
 {
 	struct bpf_dynptr *dynptr = (struct bpf_dynptr *)arg1;
 	__u64 tmp;
 	int ret;
+	char words[] = "start MD5 calculation";
+	char digest[32] = {};
+	__u64 handle;
+	char fmt[] = "tfm:0x%llx, ret:%x\n";
 	//void *p = NULL;
 
 	bpf_printk("entering do_md5()\n");
-	bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
 	ret = bpf_dynptr_read(&tmp, sizeof(__u64), dynptr, 0, 0);
 	bpf_printk("ret:%d\n", ret);
+	bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
+	/* trigger MD5 */
+	ret = bpf_crypto_alloc_shash("md5", 3, 0, 0, &handle);
+	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
+	ret = bpf_crypto_shash_digest(handle, words, 21, (void *)&digest, 32);
+	dump_md5_digest(digest, 16);
+	//bpf_printk("digest ret:%d, digest:0x%llx\n", ret, *(__u64 *)digest);
+	bpf_crypto_free_shash(handle);
 	//bpf_printk("arg1:0x%llx\n", arg1);
 	//bpf_printk("*dynptr:0x%llx\n", *(__u64 *)dynptr);
 	//bpf_printk("entering do_md5(), arg1:%llx, arg2:%llx, arg3:%llx\n", arg1, arg2, arg3);
@@ -58,8 +103,6 @@ int handle_user_ringbuf()
 {
 	long status = 0;
 	long cons_pos, prod_pos, avail_data, rb_size;
-	//int ret, key;
-	//int *value;
 	char fmt3[] = "rb_size:%d, avail_data:%d\n";
 	char fmt4[] = "cons_pos:%d, prod_pos:%d\n";
 
@@ -104,7 +147,7 @@ int bpf_md5()
 	//key = 0;
 	//value = 0x55;
 	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
-	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
+	ret = bpf_crypto_alloc_shash("md5", 3, 0, 0, &handle);
 	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
 	bpf_crypto_free_shash(handle);
 	/*
