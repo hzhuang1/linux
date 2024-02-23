@@ -66,25 +66,28 @@ static int dump_md5_digest(void *digest, size_t digest_sz)
 //static long do_md5(const struct bpf_dynptr *dynptr, void *ctx)
 static long do_md5(__u64 arg1, __u64 arg2, __u64 arg3, __u64 arg4, __u64 arg5)
 {
-	struct bpf_dynptr *dynptr = (struct bpf_dynptr *)arg1;
-	__u64 tmp;
-	int ret;
+	//struct bpf_dynptr *dynptr = (struct bpf_dynptr *)arg1;
+	//__u64 tmp;
+	long ret;
 	char words[] = "start MD5 calculation";
 	char digest[32] = {};
-	__u64 handle;
-	char fmt[] = "tfm:0x%llx, ret:%x\n";
+	unsigned long handle;
+	char fmt[] = "tfm:0x%llx, ret:%d\n";
 	//void *p = NULL;
 
 	bpf_printk("entering do_md5()\n");
-	ret = bpf_dynptr_read(&tmp, sizeof(__u64), dynptr, 0, 0);
-	bpf_printk("ret:%d\n", ret);
-	bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
+	//ret = bpf_dynptr_read(&tmp, sizeof(__u64), dynptr, 0, 0);
+	//bpf_printk("ret:%d\n", ret);
+	//bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
 	/* trigger MD5 */
-	ret = bpf_crypto_alloc_shash("md5", 3, 0, 0, &handle);
+	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
 	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
-	ret = bpf_crypto_shash_digest(handle, words, 21, (void *)&digest, 32);
+	if (ret != 0) {
+		bpf_printk("exit do_md5(), ret:%d\n", ret);
+		return 1;
+	}
+	ret = bpf_crypto_shash_digest(handle, words, 21, (void *)&digest, 16);
 	dump_md5_digest(digest, 16);
-	//bpf_printk("digest ret:%d, digest:0x%llx\n", ret, *(__u64 *)digest);
 	bpf_crypto_free_shash(handle);
 	//bpf_printk("arg1:0x%llx\n", arg1);
 	//bpf_printk("*dynptr:0x%llx\n", *(__u64 *)dynptr);
@@ -129,7 +132,7 @@ int handle_user_ringbuf()
 //SEC("sys_getpgid")
 int bpf_md5()
 {
-	__u64 handle;
+	unsigned long handle;
 	int ret;
 	long cons_pos, prod_pos, avail_data, rb_size;
 	//int ret, key;
@@ -147,7 +150,7 @@ int bpf_md5()
 	//key = 0;
 	//value = 0x55;
 	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
-	ret = bpf_crypto_alloc_shash("md5", 3, 0, 0, &handle);
+	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
 	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
 	bpf_crypto_free_shash(handle);
 	/*
