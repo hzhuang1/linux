@@ -5690,13 +5690,13 @@ union bpf_attr {
  *
  *		PTR_ERR() returns the error code.
  *
- * long bpf_crypto_free_shash(u64 tfm)
+ * long bpf_crypto_free_shash(unsigned long handle)
  *	Description
  *		Free th message digest handle.
  *	Return
  *		0 on success.
  *
- * long bpf_crypto_shash_init(u64 handle)
+ * long bpf_crypto_shash_init(unsigned long handle)
  *	Description
  *		Initialize message digest.
  *	Return
@@ -5704,7 +5704,7 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_update(u64 handle, const void *data, u32 len)
+ * long bpf_crypto_shash_update(unsigned long handle, const void *data, size_t len)
  *	Description
  *		Add data to message digest for processing.
  *	Return
@@ -5712,7 +5712,7 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_final(u64 handle, u8 *out)
+ * long bpf_crypto_shash_final(unsigned long handle, void *out, size_t len)
  *	Description
  *		Calculate message digest.
  *	Return
@@ -5720,7 +5720,7 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_digest(u64 handle, void *data, size_t data_sz, void *out, size_t out_sz)
+ * long bpf_crypto_shash_digest(unsigned long handle, void *data, size_t data_sz, void *out, size_t out_sz)
  *	Description
  *		Calculate message digest for buffer.
  *	Return
@@ -5728,13 +5728,13 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_digestsize(u64 tfm)
+ * long bpf_crypto_shash_digestsize(unsinged long handle)
  *	Description
  *		Obtain message digest size.
  *	Return
  *		Digest size.
  *
- * long bpf_crypto_shash_setkey(u64 tfm, const void *key, u32 key_len)
+ * long bpf_crypto_shash_setkey(unsigned long handle, const void *key, size_t key_len)
  *	Description
  *		Set key for message digest.
  *	Return

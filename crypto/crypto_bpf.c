@@ -54,7 +54,7 @@ const struct bpf_func_proto bpf_crypto_alloc_shash_proto = {
 	.arg4_type	= ARG_PTR_TO_LONG,
 };
 
-BPF_CALL_1(bpf_crypto_free_shash, u64, handle)
+BPF_CALL_1(bpf_crypto_free_shash, unsigned long, handle)
 {
 	struct shash_desc *sdesc;
 	struct crypto_shash *shash;
@@ -75,7 +75,7 @@ const struct bpf_func_proto bpf_crypto_free_shash_proto = {
 	.arg1_type	= ARG_ANYTHING,
 };
 
-BPF_CALL_1(bpf_crypto_shash_init, u64, handle)
+BPF_CALL_1(bpf_crypto_shash_init, unsigned long, handle)
 {
 	struct shash_desc *desc = (struct shash_desc *)handle;
 
@@ -89,8 +89,8 @@ const struct bpf_func_proto bpf_crypto_shash_init_proto = {
 	.arg1_type	= ARG_ANYTHING,
 };
 
-BPF_CALL_3(bpf_crypto_shash_update, u64, handle, const u8 *, data,
-	   unsigned int, len)
+BPF_CALL_3(bpf_crypto_shash_update, unsigned long, handle, const void *, data,
+	   size_t, len)
 {
 	struct shash_desc *desc = (struct shash_desc *)handle;
 
@@ -108,7 +108,8 @@ const struct bpf_func_proto bpf_crypto_shash_update_proto = {
 	.arg3_type	= ARG_ANYTHING,
 };
 
-BPF_CALL_2(bpf_crypto_shash_final, u64, handle, void *, out)
+BPF_CALL_3(bpf_crypto_shash_final, unsigned long, handle, void *, out,
+	   size_t, len)
 {
 	struct shash_desc *desc = (struct shash_desc *)handle;
 	int ret;
@@ -124,9 +125,10 @@ const struct bpf_func_proto bpf_crypto_shash_final_proto = {
 	.ret_type	= RET_INTEGER,
 	.arg1_type	= ARG_ANYTHING,
 	.arg2_type	= ARG_PTR_TO_MEM,
+	.arg3_type	= ARG_CONST_SIZE_OR_ZERO,
 };
 
-BPF_CALL_5(bpf_crypto_shash_digest, u64, handle, u8 *, data,
+BPF_CALL_5(bpf_crypto_shash_digest, unsigned long, handle, void *, data,
 	   size_t, len, void *, out, size_t, size)
 {
 	struct shash_desc *desc = (struct shash_desc *)handle;
@@ -145,9 +147,9 @@ const struct bpf_func_proto bpf_crypto_shash_digest_proto = {
 	.arg5_type	= ARG_CONST_SIZE_OR_ZERO,
 };
 
-BPF_CALL_1(bpf_crypto_shash_digestsize, u64, tfm)
+BPF_CALL_1(bpf_crypto_shash_digestsize, unsigned long, handle)
 {
-	struct crypto_shash *shash = (struct crypto_shash *)tfm;
+	struct crypto_shash *shash = (struct crypto_shash *)handle;
 
 	return crypto_shash_digestsize(shash);
 }
@@ -159,10 +161,10 @@ const struct bpf_func_proto bpf_crypto_shash_digestsize_proto = {
 	.arg1_type	= ARG_ANYTHING,
 };
 
-BPF_CALL_3(bpf_crypto_shash_setkey, u64, tfm, const u8 *, key,
-	   unsigned int, keylen)
+BPF_CALL_3(bpf_crypto_shash_setkey, unsigned long, handle, const void *, key,
+	   size_t, keylen)
 {
-	struct crypto_shash *shash = (struct crypto_shash *)tfm;
+	struct crypto_shash *shash = (struct crypto_shash *)handle;
 
 	return crypto_shash_setkey(shash, key, keylen);
 }
