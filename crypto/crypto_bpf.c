@@ -75,20 +75,6 @@ const struct bpf_func_proto bpf_crypto_free_shash_proto = {
 	.arg1_type	= ARG_ANYTHING,
 };
 
-BPF_CALL_1(bpf_crypto_shash_init, u64, handle)
-{
-	struct shash_desc *desc = (struct shash_desc *)handle;
-
-	return crypto_shash_init(desc);
-}
-
-const struct bpf_func_proto bpf_crypto_shash_init_proto = {
-	.func		= bpf_crypto_shash_init,
-	.gpl_only	= false,
-	.ret_type	= RET_INTEGER,
-	.arg1_type	= ARG_ANYTHING,
-};
-
 BPF_CALL_3(bpf_crypto_shash_update, u64, handle, const void *, data,
 	   size_t, len)
 {

@@ -5696,14 +5696,6 @@ union bpf_attr {
  *	Return
  *		0 on success.
  *
- * long bpf_crypto_shash_init(u64 handle)
- *	Description
- *		Initialize message digest.
- *	Return
- *		0 on success.
- *
- *		Negative value if error occurs.
- *
  * long bpf_crypto_shash_update(u64 handle, const void *data, size_t len)
  *	Description
  *		Add data to message digest for processing.
@@ -5957,12 +5949,11 @@ union bpf_attr {
 	FN(cgrp_storage_delete, 211, ##ctx)		\
 	FN(crypto_alloc_shash, 212, ##ctx)		\
 	FN(crypto_free_shash, 213, ##ctx)		\
-	FN(crypto_shash_init, 214, ##ctx)		\
-	FN(crypto_shash_update, 215, ##ctx)		\
-	FN(crypto_shash_final, 216, ##ctx)		\
-	FN(crypto_shash_digest, 217, ##ctx)		\
-	FN(crypto_shash_digestsize, 218, ##ctx)		\
-	FN(crypto_shash_setkey, 219, ##ctx)		\
+	FN(crypto_shash_update, 214, ##ctx)		\
+	FN(crypto_shash_final, 215, ##ctx)		\
+	FN(crypto_shash_digest, 216, ##ctx)		\
+	FN(crypto_shash_digestsize, 217, ##ctx)		\
+	FN(crypto_shash_setkey, 218, ##ctx)		\
 	/* */
 
 /* backwards-compatibility macros for users of __BPF_FUNC_MAPPER that don't
