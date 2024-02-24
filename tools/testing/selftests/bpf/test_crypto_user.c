@@ -142,11 +142,6 @@ static int libbpf_print_fn(enum libbpf_print_level level, const char *format,
 	return vfprintf(stderr, format, args);
 }
 
-int rb_event(void *ctx, void *data, size_t data_sz)
-{
-	return 0;
-}
-
 size_t load_test_data(void *dst)
 {
 	void *p;
@@ -159,6 +154,46 @@ size_t load_test_data(void *dst)
 	*(__u32 *)dst = size;
 
 	return size;
+}
+
+int dump_data(void *buf, size_t len)
+{
+	int i, offset;
+	char out[64] = {};
+	__u64 tmp;
+	unsigned char c;
+	for (i = 0, offset = 0; i < len; i++) {
+		if (i % 8 == 0)
+			tmp = *(__u64 *)(buf + i);
+		c = (tmp & 0xf0) >> 4;
+		if ((c >= 0) && (c <= 9)) {
+			out[offset++] = 0x30 + c;
+		} else if ((c >= 0xa) && (c <= 0xf)) {
+			out[offset++] = 0x61 + c - 10;
+		} else {
+			fprintf(stderr, "wc[%d]:%x, whole value:0x%llx\n", i, c, *(__u64 *)buf);
+		}
+		c = tmp & 0x0f;
+		if ((c >= 0) && (c <= 9)) {
+			out[offset++] = 0x30 + c;
+		} else if ((c >= 0xa) && (c <= 0xf)) {
+			out[offset++] = 0x61 + c - 10;
+		} else {
+			fprintf(stderr, "wc[%d]:%x, whole value:0x%llx\n", i, c, *(__u64 *)buf);
+		}
+		tmp = tmp >> 8;
+		if (i < len - 1)
+			out[offset++] = '-';
+	}
+	out[offset] = '\0';
+	printf("digest:%s\n", out);
+	return 0;
+}
+
+int rb_event(void *ctx, void *data, size_t data_sz)
+{
+	dump_data(data, data_sz);
+	return 0;
 }
 
 int drain_md5(void)
@@ -220,6 +255,10 @@ int main(int argc, char **argv)
 	memcpy(data_ptr, words, strlen(words));
 	user_ring_buffer__submit(rb_data, data_ptr);
 	drain_md5();
+	do {
+		err = ring_buffer__poll(rb_digest, 100);
+	} while (err);
+	ring_buffer__free(rb_digest);
 	return 0;
 
 	/* map the producer_pos as RW */
