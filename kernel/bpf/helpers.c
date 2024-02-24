@@ -1542,7 +1542,6 @@ BPF_CALL_5(bpf_dynptr_read, void *, dst, u32, len, const struct bpf_dynptr_kern 
 	enum bpf_dynptr_type type;
 	int err;
 
-	pr_err("#%s, data:0x%llx\n", __func__, (__u64)src->data);
 	if (!src->data || flags)
 		return -EINVAL;
 
@@ -1791,8 +1790,6 @@ bpf_base_func_proto(enum bpf_func_id func_id)
 		return &bpf_crypto_alloc_shash_proto;
 	case BPF_FUNC_crypto_free_shash:
 		return &bpf_crypto_free_shash_proto;
-	case BPF_FUNC_crypto_shash_init:
-		return &bpf_crypto_shash_init_proto;
 	case BPF_FUNC_crypto_shash_update:
 		return &bpf_crypto_shash_update_proto;
 	case BPF_FUNC_crypto_shash_final:
