@@ -5720,7 +5720,7 @@ union bpf_attr {
  *
  *		Negative value if error occurs.
  *
- * long bpf_crypto_shash_digest(unsigned long handle, const void *data, size_t data_sz, void *out, size_t out_sz)
+ * long bpf_crypto_shash_digest(long handle, const void *data, size_t data_sz, void *out, size_t out_sz)
  *	Description
  *		Calculate message digest for buffer.
  *	Return
