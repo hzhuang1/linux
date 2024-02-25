@@ -251,7 +251,6 @@ int main(int argc, char **argv)
 		goto cleanup_krb;
 	}
 	data_ptr = user_ring_buffer__reserve(rb_data, strlen(words));
-	fprintf(stderr, "#urb_fd:%d, krb_fd:%d, data_ptr:0x%llx\n", urb_fd, krb_fd, (__u64)data_ptr);
 	memcpy(data_ptr, words, strlen(words));
 	user_ring_buffer__submit(rb_data, data_ptr);
 	drain_md5();

@@ -63,23 +63,27 @@ static int dump_md5_digest(void *digest, size_t digest_sz)
 	return 0;
 }
 
+char src[4096];
+
+#define USER_DATA_LEN	22
+#define MD5_DIGEST_LEN	16
+
 static long do_md5(struct bpf_dynptr *dynptr, void *ctx)
-//static long do_md5(__u64 arg1, __u64 arg2, __u64 arg3, __u64 arg4, __u64 arg5)
 {
-	//struct bpf_dynptr *dynptr = (struct bpf_dynptr *)arg1;
-	__u64 tmp;
 	long ret;
-	char words[] = "start MD5 calculation";
-	char digest[32] = {};
+	//char words[] = "start MD5 calculation";
+	char digest[MD5_DIGEST_LEN] = {};
 	__u64 handle;
 	char fmt[] = "tfm:0x%llx, ret:%d\n";
 	//void *p = NULL;
 
 	bpf_printk("entering do_md5()\n");
-	ret = bpf_dynptr_read(&tmp, sizeof(__u64), dynptr, 0, 0);
-	bpf_printk("ret:%d\n", ret);
-	bpf_printk("dynptr:0x%llx\n", (__u64)dynptr);
-	//bpf_printk("*dynptr:0x%llx\n", *(__u8 *)dynptr);
+	ret = bpf_dynptr_read(&src, USER_DATA_LEN, dynptr, 0, 0);
+	if (ret) {
+		bpf_printk("fail to read, ret:%d\n", ret);
+		return 1;
+	}
+
 	/* trigger MD5 */
 	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
 	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
@@ -87,18 +91,12 @@ static long do_md5(struct bpf_dynptr *dynptr, void *ctx)
 		bpf_printk("exit do_md5(), ret:%d\n", ret);
 		return 1;
 	}
-	ret = bpf_crypto_shash_digest(handle, words, 21, (void *)&digest, 16);
-	dump_md5_digest(digest, 16);
-	bpf_ringbuf_output(&kern_rb, digest, 16, 0);
+	ret = bpf_crypto_shash_digest(handle, src, USER_DATA_LEN,
+				      (void *)&digest, MD5_DIGEST_LEN);
+	dump_md5_digest(digest, MD5_DIGEST_LEN);
+	bpf_ringbuf_output(&kern_rb, digest, MD5_DIGEST_LEN, 0);
 	bpf_crypto_free_shash(handle);
 
-	//bpf_printk("arg1:0x%llx\n", arg1);
-	//bpf_printk("entering do_md5(), arg1:%llx, arg2:%llx, arg3:%llx\n", arg1, arg2, arg3);
-	//p = bpf_dynptr_data(dynptr, 0, 5);
-	//p = dynptr;
-	//p = p + 8;
-	//bpf_printk("p:0x%llx\n", (__u64)p);
-	//bpf_printk("*p:0x%llx\n", *(__u64 *)p);
 	return 0;
 }
 
