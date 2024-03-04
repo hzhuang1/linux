@@ -8,7 +8,6 @@
 #include <bpf/bpf_tracing.h>
 #include <string.h>
 
-#if 1
 volatile int my_pid_var = 0;
 volatile int res_var = 0;
 
@@ -71,11 +70,9 @@ char src[4096];
 static long do_md5(struct bpf_dynptr *dynptr, void *ctx)
 {
 	long ret;
-	//char words[] = "start MD5 calculation";
 	char digest[MD5_DIGEST_LEN] = {};
 	__u64 handle;
 	char fmt[] = "tfm:0x%llx, ret:%d\n";
-	//void *p = NULL;
 
 	bpf_printk("entering do_md5()\n");
 	ret = bpf_dynptr_read(&src, USER_DATA_LEN, dynptr, 0, 0);
@@ -100,7 +97,6 @@ static long do_md5(struct bpf_dynptr *dynptr, void *ctx)
 	return 0;
 }
 
-//SEC("fentry/__arm64_sys_getpgid")
 SEC("tracepoint/syscalls/sys_enter_getpgid")
 int handle_user_ringbuf()
 {
@@ -126,17 +122,11 @@ int handle_user_ringbuf()
 	return 0;
 }
 
-//SEC("perf_event")
-//SEC("crypto/shash")
-//SEC("tracepoint/raw_syscalls/sys_enter")
-//SEC("sys_getpgid")
 int bpf_md5()
 {
 	__u64 handle;
 	int ret;
 	long cons_pos, prod_pos, avail_data, rb_size;
-	//int ret, key;
-	//int *value;
 	char fmt[] = "tfm:0x%llx, ret:%x\n";
 	char fmt3[] = "rb_size:%d, avail_data:%d\n";
 	char fmt4[] = "cons_pos:%d, prod_pos:%d\n";
@@ -147,90 +137,10 @@ int bpf_md5()
 	rb_size = bpf_ringbuf_query(&kern_rb, BPF_RB_RING_SIZE);
 	bpf_trace_printk(fmt3, sizeof(fmt3), rb_size, avail_data);
 	bpf_trace_printk(fmt4, sizeof(fmt4), cons_pos, prod_pos);
-	//key = 0;
-	//value = 0x55;
-	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
 	ret = bpf_crypto_alloc_shash("md5", 0, 0, &handle);
 	bpf_trace_printk(fmt, sizeof(fmt), handle, ret);
 	bpf_crypto_free_shash(handle);
-	/*
-	ret = bpf_crypto_shash_init(tfm);
-	bpf_trace_printk(fmt3, sizeof(fmt3), ret);
-	value = bpf_map_lookup_elem(&hash_map, &key);
-	if (value) {
-		*value = 0x55;
-	}
-	key = 1;
-	*/
-	//value = ret;
-	//bpf_map_update_elem(&hash_map, &key, &value, BPF_ANY);
 	return ret;
-	//return 0;
 }
-
-  #if 0
-typedef __u64 u64;
-typedef char stringkey[64];
-
-struct {
-	__uint(type, BPF_MAP_TYPE_HASH);
-	__uint(max_entries, 128);
-	stringkey* key;
-	__type(value, u64);
-} execve_counter SEC(".maps");
-
-SEC("crypto/shash")
-int bpf_md5(void *ctx)
-{
-	stringkey key = "execve_counter";
-	u64 *v = NULL;
-	v = bpf_map_lookup_elem(&execve_counter, &key);
-	if (v != NULL) {
-		*v += 1;
-	}
-	return 0;
-}
-
-SEC("tp/raw_syscalls/sys_enter")
-int handle_modern(void *ctx)
-{
-	int cur_pid;
-	char fmt2[] = "hello world\n";
-
-	bpf_trace_printk(fmt2, sizeof(fmt2));
-	cur_pid = bpf_get_current_pid_tgid() >> 32;
-	if (cur_pid != my_pid_var)
-		return 1;
-
-	if (res_var == 0)
-		/* we need bpf_printk() to validate libbpf logic around unused
-		 * global maps and legacy kernels; see comment in handle_legacy()
-		 */
-		bpf_printk("Modern-case bpf_printk test, pid %d\n", cur_pid);
-	res_var = 1;
-
-	return res_var;
-}
-  #endif
 
 char _license[] SEC("license") = "GPL";
-#endif
-
-#if 0
-char LICENSE[] SEC("license") = "Dual BSD/GPL";
-
-int my_pid = 0;
-
-SEC("tp/syscalls/sys_enter_write")
-int handle_tp(void *ctx)
-{
-        int pid = bpf_get_current_pid_tgid() >> 32;
-
-        if (pid != my_pid)
-                return 0;
-
-        bpf_printk("BPF triggered from PID %d.\n", pid);
-
-        return 0;
-}
-#endif
